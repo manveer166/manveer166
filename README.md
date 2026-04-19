@@ -24,7 +24,18 @@ contact emergency services or your doctor.
 - Anthropic SDK — `claude-opus-4-7` streaming
 - Single-user lock via `ALLOWED_EMAIL`
 
-## Setup
+## Get it live in ~5 minutes
+
+1. **Create a Supabase project** at [supabase.com](https://supabase.com) (free tier). Open the SQL editor, paste `supabase/schema.sql`, and run it. Then in **Authentication → URL Configuration** add `https://YOUR-VERCEL-URL/auth/callback` (and `http://localhost:3000/auth/callback` for local dev) to the redirect allowlist.
+2. **Get an Anthropic API key** at [console.anthropic.com](https://console.anthropic.com).
+3. **Deploy to Vercel:** [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/manveer166/manveer166&env=NEXT_PUBLIC_SUPABASE_URL,NEXT_PUBLIC_SUPABASE_ANON_KEY,SUPABASE_SERVICE_ROLE_KEY,ANTHROPIC_API_KEY,ALLOWED_EMAIL)
+4. In the Vercel import screen, paste the five env vars:
+   - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` (from Supabase → Project settings → API)
+   - `ANTHROPIC_API_KEY` (from Anthropic console)
+   - `ALLOWED_EMAIL` (your email — only this address can sign in)
+5. Once deployed, visit the URL, enter your email, click the magic link in your inbox.
+
+## Detailed setup
 
 ### 1. Supabase
 
