@@ -1,0 +1,31 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html, body {
+  background: #0b0d10;
+  color: #e6e8eb;
+}
+
+.card {
+  @apply bg-panel border border-edge rounded-xl p-5;
+}
+
+.btn {
+  @apply inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-edge hover:bg-[#2b3038] text-ink text-sm;
+}
+
+.btn-primary {
+  @apply bg-accent text-black hover:bg-[#9ed3ff];
+}
+
+.input, .textarea, .select {
+  @apply w-full bg-[#0e1116] border border-edge rounded-lg px-3 py-2 text-sm text-ink outline-none focus:border-accent;
+}
+
+.label { @apply block text-xs uppercase tracking-wide text-muted mb-1; }
+.pill { @apply inline-flex px-2 py-0.5 rounded-full text-xs border border-edge bg-[#181c22] text-muted; }
