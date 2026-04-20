@@ -106,6 +106,16 @@ body {
 .bounce-b { animation: bounce 2.4s ease-in-out infinite 0.3s; }
 .bounce-c { animation: bounce 2.4s ease-in-out infinite 0.6s; }
 
+.scene-emoji.scene-swap {
+    animation: bounce 2.4s ease-in-out infinite, scenePop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes scenePop {
+    0%   { transform: scale(0.4) rotate(-20deg); opacity: 0; }
+    60%  { transform: scale(1.2) rotate(8deg);   opacity: 1; }
+    100% { transform: scale(1)   rotate(0);      opacity: 1; }
+}
+
 @keyframes bounce {
     0%, 100% { transform: translateY(0) rotate(-4deg); }
     50%      { transform: translateY(-10px) rotate(4deg); }

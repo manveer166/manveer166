@@ -8,18 +8,36 @@
     const card = document.getElementById("card");
     const celebration = document.getElementById("celebration");
     const confetti = document.getElementById("confetti");
+    const sceneEl = document.getElementById("cuteScene");
+    const sceneSlots = sceneEl ? sceneEl.querySelectorAll(".scene-emoji") : [];
 
+    // Each stage has a pleading message and a tiny 3-emoji scene that swaps in.
     const stages = [
-        "Pookie, you sure? 🥺",
-        "Don't do this to me...",
-        "I'll cry 😭",
-        "You'll break my heart 💔",
-        "Please reconsider 🥹",
-        "Think of us together 💑",
-        "I made this just for you!",
-        "Okay now you're just being mean 😤",
-        "Last chance... 🙏",
-        "Fine, I'll keep asking forever 💕"
+        { msg: "Pookie, you sure? 🥺",                     scene: ["🥺", "💕", "🧸"] },
+        { msg: "Don't do this to me...",                   scene: ["😟", "💕", "🥀"] },
+        { msg: "I'll cry 😭",                              scene: ["😭", "💧", "😭"] },
+        { msg: "You'll break my heart 💔",                 scene: ["💔", "🩹", "💔"] },
+        { msg: "Please reconsider 🥹",                     scene: ["🥹", "🙏", "🥹"] },
+        { msg: "Think of us together 💑",                  scene: ["👫", "💑", "👭"] },
+        { msg: "I made this just for you!",                scene: ["🎨", "✨", "💌"] },
+        { msg: "I'll give you chocolate 🍫",               scene: ["🍫", "🍬", "🍭"] },
+        { msg: "Ice cream too? 🍦",                         scene: ["🍦", "🍨", "🍧"] },
+        { msg: "A puppy? I'll get you a puppy 🐶",         scene: ["🐶", "🐾", "🐕"] },
+        { msg: "Kitten option also available 🐱",          scene: ["🐱", "🐈", "🐾"] },
+        { msg: "Flowers. All the flowers 💐",              scene: ["💐", "🌷", "🌹"] },
+        { msg: "I memorized your coffee order ☕",          scene: ["☕", "💗", "🥐"] },
+        { msg: "I'll do the dishes. Forever. 🧽",          scene: ["🧽", "🍽️", "✨"] },
+        { msg: "I'll stop stealing your fries 🍟",         scene: ["🍟", "🤞", "😇"] },
+        { msg: "Okay that last one was a lie 😅",          scene: ["😅", "🍟", "😋"] },
+        { msg: "My mom already likes you 👵",              scene: ["👵", "💕", "🫶"] },
+        { msg: "I told my friends about us 😳",            scene: ["📱", "💬", "😳"] },
+        { msg: "Look how cute I am though 🐰",             scene: ["🐰", "✨", "🥹"] },
+        { msg: "Puppy-dog-eyes mode: 🥺🥺🥺",              scene: ["🥺", "🥺", "🥺"] },
+        { msg: "Last chance... 🙏",                        scene: ["🙏", "💗", "🙏"] },
+        { msg: "I'll love you forever 🌷",                 scene: ["🌷", "💞", "🌷"] },
+        { msg: "Pretty please? 💐",                         scene: ["💐", "🥹", "💐"] },
+        { msg: "Okay you're stuck with me now 💘",         scene: ["💘", "💖", "💘"] },
+        { msg: "Fine, I'll keep asking forever 💕",         scene: ["💖", "💕", "💗"] }
     ];
 
     const MAX_LEVEL = 10;
@@ -85,6 +103,18 @@
         return { x, y };
     }
 
+    function setScene(emojis) {
+        if (!emojis || !sceneSlots.length) return;
+        sceneSlots.forEach((slot, i) => {
+            const next = emojis[i % emojis.length];
+            if (slot.textContent === next) return;
+            slot.classList.remove("scene-swap");
+            void slot.offsetWidth;
+            slot.textContent = next;
+            slot.classList.add("scene-swap");
+        });
+    }
+
     function dodge() {
         ensureFloating();
 
@@ -92,7 +122,9 @@
         noBtn.style.left = x + "px";
         noBtn.style.top = y + "px";
 
-        setMessage(stages[stageIndex % stages.length]);
+        const stage = stages[stageIndex % stages.length];
+        setMessage(stage.msg);
+        setScene(stage.scene);
         stageIndex++;
 
         if (level < MAX_LEVEL) level++;
