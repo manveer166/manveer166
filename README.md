@@ -31,6 +31,16 @@ contact emergency services or your doctor.
 - Anthropic SDK — `claude-opus-4-7` streaming
 - Single-user lock via `ALLOWED_EMAIL`
 
+## Auto-deploy from GitHub (one-time setup)
+
+Pushes to `main` deploy to Vercel automatically via `.github/workflows/deploy.yml`. One-time setup: in your Vercel project settings copy `Project ID` and `Team ID` (or your personal `Org ID`), create a token at [vercel.com/account/tokens](https://vercel.com/account/tokens), then add these to GitHub → repo Settings → Secrets and variables → Actions:
+
+- `VERCEL_TOKEN`
+- `VERCEL_ORG_ID`
+- `VERCEL_PROJECT_ID`
+
+Env vars (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `ANTHROPIC_API_KEY`, `ALLOWED_EMAIL`) live in the Vercel project — `vercel pull` picks them up during the workflow.
+
 ## Get it live in ~5 minutes
 
 1. **Create a Supabase project** at [supabase.com](https://supabase.com) (free tier). Open the SQL editor, paste `supabase/schema.sql`, and run it. Then in **Authentication → URL Configuration** add `https://YOUR-VERCEL-URL/auth/callback` (and `http://localhost:3000/auth/callback` for local dev) to the redirect allowlist.
