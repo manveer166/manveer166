@@ -53,3 +53,15 @@ export type ChatMessage = {
   content: string;
   created_at: string;
 };
+
+export type FoodEntry = {
+  id: string;
+  user_id: string;
+  eaten_at: string;
+  meal: "breakfast" | "lunch" | "dinner" | "snack" | "drink" | null;
+  description: string;
+  calories: number | null;
+  notes: string | null;
+  flagged_allergens: string[] | null;
+  created_at: string;
+};

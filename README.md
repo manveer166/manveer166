@@ -12,9 +12,11 @@ contact emergency services or your doctor.
 - Dashboard with latest vitals and counts
 - Medications — name, dosage, schedule, benefits, side effects, instructions
 - Allergies — allergen, severity, reaction
-- Medical records — upload PDFs/images/text, optional extracted text
+- Food log — manual entries, auto-scanned against your allergies, calorie tally
+- Vitals — manual entry for BP, weight, glucose, SpO₂, etc.
+- Medical records — upload PDFs/images/text; Claude auto-extracts text + a summary for searchable history
 - Apple Health import — upload `export.xml` and we parse numeric samples
-- AI assistant (Claude) grounded in your profile + records + latest vitals
+- AI assistant (Claude) grounded in your full profile: meds, allergies, recent food, vitals, and extracted record text
 - Health lookup — one-click search across WebMD, Mayo Clinic, MedlinePlus, Drugs.com
 
 ## Stack

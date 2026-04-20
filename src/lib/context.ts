@@ -1,7 +1,7 @@
 import { SupabaseClient } from "@supabase/supabase-js";
 
 export async function buildUserContext(sb: SupabaseClient, userId: string) {
-  const [meds, allergies, records, vitals] = await Promise.all([
+  const [meds, allergies, records, vitals, food] = await Promise.all([
     sb
       .from("medications")
       .select("name, dosage, schedule, benefits, side_effects, instructions, started_on, active")
@@ -23,6 +23,12 @@ export async function buildUserContext(sb: SupabaseClient, userId: string) {
       .eq("user_id", userId)
       .order("measured_at", { ascending: false })
       .limit(200),
+    sb
+      .from("food_entries")
+      .select("eaten_at, meal, description, calories, flagged_allergens")
+      .eq("user_id", userId)
+      .order("eaten_at", { ascending: false })
+      .limit(30),
   ]);
 
   const latestByType = new Map<string, { value: number; unit: string | null; measured_at: string }>();
@@ -63,6 +69,20 @@ export async function buildUserContext(sb: SupabaseClient, userId: string) {
   if (!latestByType.size) lines.push("_None recorded._");
   for (const [type, v] of latestByType) {
     lines.push(`- ${type}: ${v.value} ${v.unit ?? ""} (at ${v.measured_at})`);
+  }
+
+  lines.push("");
+  lines.push("## Recent food log (last 30 entries)");
+  if (!food.data?.length) lines.push("_No food logged._");
+  for (const f of food.data ?? []) {
+    const flagged = f.flagged_allergens?.length
+      ? ` [⚠ ${f.flagged_allergens.join(", ")}]`
+      : "";
+    lines.push(
+      `- ${f.eaten_at}${f.meal ? ` (${f.meal})` : ""}: ${f.description}${
+        f.calories ? ` — ${f.calories} kcal` : ""
+      }${flagged}`,
+    );
   }
 
   lines.push("");

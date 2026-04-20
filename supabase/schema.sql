@@ -60,12 +60,26 @@ create table if not exists chat_messages (
 );
 create index if not exists chat_messages_user_time on chat_messages (user_id, created_at);
 
+create table if not exists food_entries (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  eaten_at timestamptz not null default now(),
+  meal text check (meal in ('breakfast','lunch','dinner','snack','drink')),
+  description text not null,
+  calories integer,
+  notes text,
+  flagged_allergens text[],
+  created_at timestamptz not null default now()
+);
+create index if not exists food_entries_user_time on food_entries (user_id, eaten_at desc);
+
 -- RLS
 alter table medications enable row level security;
 alter table allergies enable row level security;
 alter table records enable row level security;
 alter table vitals enable row level security;
 alter table chat_messages enable row level security;
+alter table food_entries enable row level security;
 
 do $$ begin
   create policy "own rows" on medications for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
@@ -81,6 +95,9 @@ do $$ begin
 exception when duplicate_object then null; end $$;
 do $$ begin
   create policy "own rows" on chat_messages for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+exception when duplicate_object then null; end $$;
+do $$ begin
+  create policy "own rows" on food_entries for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 exception when duplicate_object then null; end $$;
 
 -- Storage bucket for uploaded medical records (private).

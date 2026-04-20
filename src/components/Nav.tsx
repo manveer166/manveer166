@@ -9,6 +9,8 @@ const links = [
   { href: "/chat", label: "Ask my assistant" },
   { href: "/medications", label: "Medications" },
   { href: "/allergies", label: "Allergies" },
+  { href: "/food", label: "Food log" },
+  { href: "/vitals", label: "Vitals" },
   { href: "/records", label: "Medical records" },
   { href: "/apple-health", label: "Apple Health" },
   { href: "/lookup", label: "Health lookup" },
