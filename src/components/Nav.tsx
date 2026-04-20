@@ -11,6 +11,7 @@ const links = [
   { href: "/allergies", label: "Allergies" },
   { href: "/food", label: "Food log" },
   { href: "/vitals", label: "Vitals" },
+  { href: "/trends", label: "Trends" },
   { href: "/records", label: "Medical records" },
   { href: "/apple-health", label: "Apple Health" },
   { href: "/lookup", label: "Health lookup" },
