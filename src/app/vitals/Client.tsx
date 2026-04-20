@@ -14,7 +14,7 @@ type Row = {
 
 export default function VitalsClient({ initial }: { initial: Row[] }) {
   const [items, setItems] = useState(initial);
-  const [type, setType] = useState(MANUAL_VITAL_TYPES[0].type);
+  const [type, setType] = useState<string>(MANUAL_VITAL_TYPES[0].type);
   const [value, setValue] = useState("");
   const [when, setWhen] = useState("");
   const [pending, start] = useTransition();

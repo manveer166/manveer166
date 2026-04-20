@@ -41,12 +41,10 @@ export default async function Dashboard() {
         .limit(10000),
     ]);
 
-  const byType = new Map<
-    string,
-    { unit: string | null; series: { t: number; v: number }[] }
-  >();
+  type Series = { unit: string | null; series: { t: number; v: number }[] };
+  const byType = new Map<string, Series>();
   for (const v of vitals.data ?? []) {
-    const entry = byType.get(v.type) ?? { unit: v.unit, series: [] };
+    const entry: Series = byType.get(v.type) ?? { unit: v.unit, series: [] };
     entry.series.push({ t: new Date(v.measured_at).getTime(), v: v.value });
     byType.set(v.type, entry);
   }
