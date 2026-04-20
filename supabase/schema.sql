@@ -73,6 +73,30 @@ create table if not exists food_entries (
 );
 create index if not exists food_entries_user_time on food_entries (user_id, eaten_at desc);
 
+create table if not exists symptoms (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  occurred_at timestamptz not null default now(),
+  description text not null,
+  severity smallint check (severity between 0 and 10),
+  mood smallint check (mood between 1 and 5),
+  notes text,
+  created_at timestamptz not null default now()
+);
+create index if not exists symptoms_user_time on symptoms (user_id, occurred_at desc);
+
+create table if not exists medication_doses (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  medication_id uuid not null references medications(id) on delete cascade,
+  taken_at timestamptz not null default now(),
+  skipped boolean not null default false,
+  notes text,
+  created_at timestamptz not null default now()
+);
+create index if not exists doses_user_time on medication_doses (user_id, taken_at desc);
+create index if not exists doses_med_time on medication_doses (medication_id, taken_at desc);
+
 -- RLS
 alter table medications enable row level security;
 alter table allergies enable row level security;
@@ -80,6 +104,8 @@ alter table records enable row level security;
 alter table vitals enable row level security;
 alter table chat_messages enable row level security;
 alter table food_entries enable row level security;
+alter table symptoms enable row level security;
+alter table medication_doses enable row level security;
 
 do $$ begin
   create policy "own rows" on medications for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
@@ -98,6 +124,12 @@ do $$ begin
 exception when duplicate_object then null; end $$;
 do $$ begin
   create policy "own rows" on food_entries for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+exception when duplicate_object then null; end $$;
+do $$ begin
+  create policy "own rows" on symptoms for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+exception when duplicate_object then null; end $$;
+do $$ begin
+  create policy "own rows" on medication_doses for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 exception when duplicate_object then null; end $$;
 
 -- Storage bucket for uploaded medical records (private).

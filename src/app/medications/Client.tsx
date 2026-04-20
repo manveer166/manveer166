@@ -1,7 +1,7 @@
 "use client";
 import { useState, useTransition } from "react";
 import { browserClient } from "@/lib/supabase/client";
-import type { Medication } from "@/lib/types";
+import type { Medication, MedicationDose } from "@/lib/types";
 
 const empty = {
   name: "",
@@ -15,11 +15,19 @@ const empty = {
   active: true,
 };
 
-export default function MedicationsClient({ initial }: { initial: Medication[] }) {
+type Dose = Pick<MedicationDose, "id" | "medication_id" | "taken_at" | "skipped">;
+
+export default function MedicationsClient({
+  initial,
+  doses: initialDoses,
+}: {
+  initial: Medication[];
+  doses: Dose[];
+}) {
   const [items, setItems] = useState(initial);
+  const [doses, setDoses] = useState(initialDoses);
   const [form, setForm] = useState(empty);
   const [pending, start] = useTransition();
-
   const sb = browserClient();
 
   async function add(e: React.FormEvent) {
@@ -28,11 +36,7 @@ export default function MedicationsClient({ initial }: { initial: Medication[] }
       const { data: user } = await sb.auth.getUser();
       const uid = user.user?.id;
       if (!uid) return;
-      const payload = {
-        ...form,
-        user_id: uid,
-        started_on: form.started_on || null,
-      };
+      const payload = { ...form, user_id: uid, started_on: form.started_on || null };
       const { data } = await sb.from("medications").insert(payload).select().single();
       if (data) {
         setItems([data, ...items]);
@@ -49,6 +53,27 @@ export default function MedicationsClient({ initial }: { initial: Medication[] }
   async function remove(id: string) {
     await sb.from("medications").delete().eq("id", id);
     setItems(items.filter((m) => m.id !== id));
+    setDoses(doses.filter((d) => d.medication_id !== id));
+  }
+
+  async function logDose(medication_id: string, skipped: boolean) {
+    const { data: user } = await sb.auth.getUser();
+    const uid = user.user?.id;
+    if (!uid) return;
+    const { data } = await sb
+      .from("medication_doses")
+      .insert({ user_id: uid, medication_id, skipped, taken_at: new Date().toISOString() })
+      .select()
+      .single();
+    if (data) setDoses([data, ...doses]);
+  }
+
+  const todayKey = new Date().toDateString();
+  const dosesByMed = new Map<string, Dose[]>();
+  for (const d of doses) {
+    const arr = dosesByMed.get(d.medication_id) ?? [];
+    arr.push(d);
+    dosesByMed.set(d.medication_id, arr);
   }
 
   return (
@@ -110,7 +135,6 @@ export default function MedicationsClient({ initial }: { initial: Medication[] }
             rows={2}
             value={form.side_effects}
             onChange={(e) => setForm({ ...form, side_effects: e.target.value })}
-            placeholder="Muscle pain, liver enzyme changes"
           />
         </div>
         <div className="sm:col-span-2">
@@ -130,46 +154,104 @@ export default function MedicationsClient({ initial }: { initial: Medication[] }
 
       <div className="space-y-3">
         {items.length === 0 && <p className="text-muted text-sm">No medications yet.</p>}
-        {items.map((m) => (
-          <div key={m.id} className="card">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="font-semibold">{m.name}</h3>
-                  {m.dosage && <span className="pill">{m.dosage}</span>}
-                  {!m.active && <span className="pill text-warn">inactive</span>}
+        {items.map((m) => {
+          const medDoses = dosesByMed.get(m.id) ?? [];
+          const takenToday = medDoses.some(
+            (d) => !d.skipped && new Date(d.taken_at).toDateString() === todayKey,
+          );
+          return (
+            <div key={m.id} className="card">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-semibold">{m.name}</h3>
+                    {m.dosage && <span className="pill">{m.dosage}</span>}
+                    {!m.active && <span className="pill text-warn">inactive</span>}
+                    {m.active && takenToday && <span className="pill text-good">taken today</span>}
+                  </div>
+                  {m.schedule && <p className="text-sm text-muted mt-1">{m.schedule}</p>}
+                  {m.benefits && (
+                    <p className="text-sm mt-2">
+                      <span className="text-muted">Benefits: </span>
+                      {m.benefits}
+                    </p>
+                  )}
+                  {m.side_effects && (
+                    <p className="text-sm mt-1">
+                      <span className="text-muted">Side effects: </span>
+                      {m.side_effects}
+                    </p>
+                  )}
+                  {m.instructions && (
+                    <p className="text-sm mt-1">
+                      <span className="text-muted">Instructions: </span>
+                      {m.instructions}
+                    </p>
+                  )}
+                  {m.active && <Adherence doses={medDoses} />}
                 </div>
-                {m.schedule && <p className="text-sm text-muted mt-1">{m.schedule}</p>}
-                {m.benefits && (
-                  <p className="text-sm mt-2">
-                    <span className="text-muted">Benefits: </span>
-                    {m.benefits}
-                  </p>
-                )}
-                {m.side_effects && (
-                  <p className="text-sm mt-1">
-                    <span className="text-muted">Side effects: </span>
-                    {m.side_effects}
-                  </p>
-                )}
-                {m.instructions && (
-                  <p className="text-sm mt-1">
-                    <span className="text-muted">Instructions: </span>
-                    {m.instructions}
-                  </p>
-                )}
-              </div>
-              <div className="flex gap-2">
-                <button className="btn" onClick={() => toggle(m.id, !m.active)}>
-                  {m.active ? "Mark inactive" : "Mark active"}
-                </button>
-                <button className="btn" onClick={() => remove(m.id)}>
-                  Delete
-                </button>
+                <div className="flex flex-col gap-2">
+                  {m.active && (
+                    <>
+                      <button
+                        className="btn btn-primary"
+                        onClick={() => logDose(m.id, false)}
+                        disabled={takenToday}
+                      >
+                        {takenToday ? "✓ Taken" : "Log dose"}
+                      </button>
+                      <button className="btn" onClick={() => logDose(m.id, true)}>
+                        Skipped
+                      </button>
+                    </>
+                  )}
+                  <button className="btn" onClick={() => toggle(m.id, !m.active)}>
+                    {m.active ? "Inactive" : "Active"}
+                  </button>
+                  <button className="btn" onClick={() => remove(m.id)}>
+                    Delete
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function Adherence({ doses }: { doses: Dose[] }) {
+  const days: { key: string; taken: boolean; skipped: boolean }[] = [];
+  for (let i = 13; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const key = d.toDateString();
+    const match = doses.find((x) => new Date(x.taken_at).toDateString() === key);
+    days.push({
+      key,
+      taken: !!match && !match.skipped,
+      skipped: !!match && match.skipped,
+    });
+  }
+  const takenCount = days.filter((d) => d.taken).length;
+  return (
+    <div className="mt-3">
+      <div className="flex items-center gap-2">
+        <div className="flex gap-1">
+          {days.map((d) => (
+            <div
+              key={d.key}
+              title={d.key + (d.taken ? " — taken" : d.skipped ? " — skipped" : "")}
+              className={`w-3 h-3 rounded-sm ${
+                d.taken ? "bg-good" : d.skipped ? "bg-bad/60" : "bg-edge"
+              }`}
+            />
+          ))}
+        </div>
+        <span className="text-xs text-muted">
+          {takenCount}/14 days
+        </span>
       </div>
     </div>
   );

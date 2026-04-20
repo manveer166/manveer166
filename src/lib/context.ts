@@ -1,7 +1,7 @@
 import { SupabaseClient } from "@supabase/supabase-js";
 
 export async function buildUserContext(sb: SupabaseClient, userId: string) {
-  const [meds, allergies, records, vitals, food] = await Promise.all([
+  const [meds, allergies, records, vitals, food, symptoms] = await Promise.all([
     sb
       .from("medications")
       .select("name, dosage, schedule, benefits, side_effects, instructions, started_on, active")
@@ -28,6 +28,12 @@ export async function buildUserContext(sb: SupabaseClient, userId: string) {
       .select("eaten_at, meal, description, calories, flagged_allergens")
       .eq("user_id", userId)
       .order("eaten_at", { ascending: false })
+      .limit(30),
+    sb
+      .from("symptoms")
+      .select("occurred_at, description, severity, mood, notes")
+      .eq("user_id", userId)
+      .order("occurred_at", { ascending: false })
       .limit(30),
   ]);
 
@@ -82,6 +88,17 @@ export async function buildUserContext(sb: SupabaseClient, userId: string) {
       `- ${f.eaten_at}${f.meal ? ` (${f.meal})` : ""}: ${f.description}${
         f.calories ? ` — ${f.calories} kcal` : ""
       }${flagged}`,
+    );
+  }
+
+  lines.push("");
+  lines.push("## Recent symptoms (last 30)");
+  if (!symptoms.data?.length) lines.push("_No symptoms logged._");
+  for (const s of symptoms.data ?? []) {
+    lines.push(
+      `- ${s.occurred_at}: ${s.description}${
+        s.severity != null ? ` — severity ${s.severity}/10` : ""
+      }${s.mood != null ? `, mood ${s.mood}/5` : ""}${s.notes ? ` (${s.notes})` : ""}`,
     );
   }
 

@@ -13,10 +13,15 @@ contact emergency services or your doctor.
 - Medications — name, dosage, schedule, benefits, side effects, instructions
 - Allergies — allergen, severity, reaction
 - Food log — manual entries, auto-scanned against your allergies, calorie tally
+- Symptom log — severity (0-10), mood (1-5), free text
 - Vitals — manual entry for BP, weight, glucose, SpO₂, etc.
+- Trends — per-metric daily-average line charts + dashboard sparklines
+- Medication dose logging with 14-day adherence dots
 - Medical records — upload PDFs/images/text; Claude auto-extracts text + a summary for searchable history
 - Apple Health import — upload `export.xml` and we parse numeric samples
-- AI assistant (Claude) grounded in your full profile: meds, allergies, recent food, vitals, and extracted record text
+- AI assistant (Claude) grounded in your full profile: meds, allergies, food, symptoms, vitals, and extracted record text
+- Weekly summary — Claude-generated digest of the past 7 days
+- Doctor summary — printable one-pager (Cmd/Ctrl+P → Save as PDF) to bring to appointments
 - Health lookup — one-click search across WebMD, Mayo Clinic, MedlinePlus, Drugs.com
 
 ## Stack

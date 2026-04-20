@@ -29,3 +29,11 @@ html, body {
 
 .label { @apply block text-xs uppercase tracking-wide text-muted mb-1; }
 .pill { @apply inline-flex px-2 py-0.5 rounded-full text-xs border border-edge bg-[#181c22] text-muted; }
+
+@media print {
+  html, body { background: #fff !important; color: #000 !important; }
+  aside, nav, .print\:hidden { display: none !important; }
+  main { padding: 0 !important; }
+  .card { border: 1px solid #ddd !important; background: #fff !important; }
+  a { color: inherit !important; text-decoration: none !important; }
+}

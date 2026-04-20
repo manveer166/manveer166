@@ -65,3 +65,24 @@ export type FoodEntry = {
   flagged_allergens: string[] | null;
   created_at: string;
 };
+
+export type Symptom = {
+  id: string;
+  user_id: string;
+  occurred_at: string;
+  description: string;
+  severity: number | null;
+  mood: number | null;
+  notes: string | null;
+  created_at: string;
+};
+
+export type MedicationDose = {
+  id: string;
+  user_id: string;
+  medication_id: string;
+  taken_at: string;
+  skipped: boolean;
+  notes: string | null;
+  created_at: string;
+};

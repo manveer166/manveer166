@@ -10,10 +10,12 @@ const links = [
   { href: "/medications", label: "Medications" },
   { href: "/allergies", label: "Allergies" },
   { href: "/food", label: "Food log" },
+  { href: "/symptoms", label: "Symptoms" },
   { href: "/vitals", label: "Vitals" },
   { href: "/trends", label: "Trends" },
   { href: "/records", label: "Medical records" },
   { href: "/apple-health", label: "Apple Health" },
+  { href: "/summary", label: "Doctor summary" },
   { href: "/lookup", label: "Health lookup" },
 ];
 
