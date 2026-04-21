@@ -1,36 +1,35 @@
 "use client";
 import { useState, useTransition } from "react";
-import { browserClient } from "@/lib/supabase/client";
-import type { Allergy } from "@/lib/types";
+import type { Allergy } from "@/lib/db";
 
 const empty = { allergen: "", severity: "moderate", reaction: "", notes: "" };
+
+async function api(path: string, method: string, body?: unknown) {
+  const res = await fetch(path, {
+    method,
+    headers: body ? { "Content-Type": "application/json" } : undefined,
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
 
 export default function AllergiesClient({ initial }: { initial: Allergy[] }) {
   const [items, setItems] = useState(initial);
   const [form, setForm] = useState(empty);
   const [pending, start] = useTransition();
-  const sb = browserClient();
 
   async function add(e: React.FormEvent) {
     e.preventDefault();
     start(async () => {
-      const { data: user } = await sb.auth.getUser();
-      const uid = user.user?.id;
-      if (!uid) return;
-      const { data } = await sb
-        .from("allergies")
-        .insert({ ...form, user_id: uid })
-        .select()
-        .single();
-      if (data) {
-        setItems([data, ...items]);
-        setForm(empty);
-      }
+      const row = (await api("/api/allergies", "POST", form)) as Allergy;
+      setItems([row, ...items]);
+      setForm(empty);
     });
   }
 
   async function remove(id: string) {
-    await sb.from("allergies").delete().eq("id", id);
+    await api(`/api/allergies/${id}`, "DELETE");
     setItems(items.filter((a) => a.id !== id));
   }
 
@@ -70,7 +69,6 @@ export default function AllergiesClient({ initial }: { initial: Allergy[] }) {
             className="input"
             value={form.reaction}
             onChange={(e) => setForm({ ...form, reaction: e.target.value })}
-            placeholder="Hives, throat tightness"
           />
         </div>
         <div className="sm:col-span-2">
@@ -80,7 +78,6 @@ export default function AllergiesClient({ initial }: { initial: Allergy[] }) {
             rows={2}
             value={form.notes}
             onChange={(e) => setForm({ ...form, notes: e.target.value })}
-            placeholder="Carries EpiPen"
           />
         </div>
         <button className="btn btn-primary sm:col-span-2 justify-center" disabled={pending}>

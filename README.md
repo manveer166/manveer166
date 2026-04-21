@@ -1,102 +1,83 @@
-# Personal Health Dashboard
+# Personal Health Dashboard — local
 
-A single-user web dashboard for tracking medications, allergies, medical records,
-Apple Health vitals, and an AI assistant (Claude) that answers questions grounded
-in your own data.
+A single-user web app that tracks medications, allergies, food, symptoms,
+vitals, and medical records, with an optional Claude-powered assistant that
+answers questions grounded in your own data.
 
-**Not medical advice.** This is an informational tool. For anything urgent,
-contact emergency services or your doctor.
+**All data stays on your machine** — SQLite database file + uploaded records
+in `./data/`. No cloud, no accounts, no login.
 
-## Features
+**Not medical advice.** Informational tool only.
 
-- Dashboard with latest vitals and counts
-- Medications — name, dosage, schedule, benefits, side effects, instructions
-- Allergies — allergen, severity, reaction
-- Food log — manual entries, auto-scanned against your allergies, calorie tally
-- Symptom log — severity (0-10), mood (1-5), free text
-- Vitals — manual entry for BP, weight, glucose, SpO₂, etc.
-- Trends — per-metric daily-average line charts + dashboard sparklines
-- Medication dose logging with 14-day adherence dots
-- Medical records — upload PDFs/images/text; Claude auto-extracts text + a summary for searchable history
-- Apple Health import — upload `export.xml` and we parse numeric samples
-- AI assistant (Claude) grounded in your full profile: meds, allergies, food, symptoms, vitals, and extracted record text
-- Weekly summary — Claude-generated digest of the past 7 days
-- Doctor summary — printable one-pager (Cmd/Ctrl+P → Save as PDF) to bring to appointments
-- Health lookup — one-click search across WebMD, Mayo Clinic, MedlinePlus, Drugs.com
-
-## Stack
-
-- Next.js 15 (App Router) + TypeScript + Tailwind
-- Supabase — auth (magic link), Postgres, Storage
-- Anthropic SDK — `claude-opus-4-7` streaming
-- Single-user lock via `ALLOWED_EMAIL`
-
-## Auto-deploy from GitHub (one-time setup)
-
-Pushes to `main` deploy to Vercel automatically via `.github/workflows/deploy.yml`. One-time setup: in your Vercel project settings copy `Project ID` and `Team ID` (or your personal `Org ID`), create a token at [vercel.com/account/tokens](https://vercel.com/account/tokens), then add these to GitHub → repo Settings → Secrets and variables → Actions:
-
-- `VERCEL_TOKEN`
-- `VERCEL_ORG_ID`
-- `VERCEL_PROJECT_ID`
-
-Env vars (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `ANTHROPIC_API_KEY`, `ALLOWED_EMAIL`) live in the Vercel project — `vercel pull` picks them up during the workflow.
-
-## Get it live in ~5 minutes
-
-1. **Create a Supabase project** at [supabase.com](https://supabase.com) (free tier). Open the SQL editor, paste `supabase/schema.sql`, and run it. Then in **Authentication → URL Configuration** add `https://YOUR-VERCEL-URL/auth/callback` (and `http://localhost:3000/auth/callback` for local dev) to the redirect allowlist.
-2. **Get an Anthropic API key** at [console.anthropic.com](https://console.anthropic.com).
-3. **Deploy to Vercel:** [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/manveer166/manveer166&env=NEXT_PUBLIC_SUPABASE_URL,NEXT_PUBLIC_SUPABASE_ANON_KEY,SUPABASE_SERVICE_ROLE_KEY,ANTHROPIC_API_KEY,ALLOWED_EMAIL)
-4. In the Vercel import screen, paste the five env vars:
-   - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` (from Supabase → Project settings → API)
-   - `ANTHROPIC_API_KEY` (from Anthropic console)
-   - `ALLOWED_EMAIL` (your email — only this address can sign in)
-5. Once deployed, visit the URL, enter your email, click the magic link in your inbox.
-
-## Detailed setup
-
-### 1. Supabase
-
-1. Create a project at [supabase.com](https://supabase.com).
-2. Open **SQL editor**, paste `supabase/schema.sql`, run it.
-3. **Authentication → Email**: enable magic link. Add your app URL to redirect
-   allowlist (e.g. `http://localhost:3000/auth/callback` and your deployed URL).
-4. **Project settings → API**: copy the project URL, anon key, and service
-   role key.
-
-### 2. Anthropic
-
-Get an API key from [console.anthropic.com](https://console.anthropic.com).
-
-### 3. Local dev
+## Quick start
 
 ```bash
-cp .env.example .env.local
-# fill in the values
+# 1. Install (needs Node 20+)
 npm install
+
+# 2. (optional) add your Anthropic key to enable the AI
+cp .env.example .env.local
+# then edit .env.local and set ANTHROPIC_API_KEY=sk-ant-...
+
+# 3. Run
 npm run dev
+# → http://localhost:3000
 ```
 
-Open http://localhost:3000, sign in with magic link (must match
-`ALLOWED_EMAIL`).
+That's it. On first load it creates `./data/health.db` and `./data/uploads/`.
 
-### 4. Deploy
+## What you get
 
-Push the repo and deploy to Vercel. Set the same env vars in the Vercel project
-settings. Add your deployed URL to the Supabase auth redirect allowlist.
+- **Dashboard** — active-med count, allergy count, record count, food-entries
+  in the last 30 days; 30-day sparklines for each vital.
+- **Ask my assistant** *(needs Anthropic key)* — Claude streams answers grounded
+  in your entire profile (meds, allergies, food, symptoms, vitals, records).
+- **Medications** — name, dosage, schedule, benefits, side effects, instructions;
+  "Log dose" / "Skipped" buttons; 14-day adherence strip per med.
+- **Allergies** — allergen, severity, reaction.
+- **Food log** — manual entries auto-scanned against your allergies, with a
+  calorie tally.
+- **Symptoms** — severity (0–10), mood (1–5), free text.
+- **Vitals** — manual entry for BP, HR, weight, SpO₂, glucose, BMI, temp,
+  respiratory rate.
+- **Trends** — per-metric daily-average charts for the last 180 days.
+- **Medical records** — upload PDFs / images / text. With an Anthropic key,
+  Claude transcribes + summarizes lab results and flags out-of-range values.
+- **Apple Health** — upload `export.xml` and we parse heart rate, steps, weight,
+  BP, SpO₂, VO₂ max, sleep, etc. into the `vitals` table.
+- **Doctor summary** — a printable one-pager (`⌘/Ctrl-P` → Save as PDF) with
+  allergies, current meds, 30-day vital ranges, recent symptoms, recent records.
+- **Health lookup** — one-click search across WebMD, Mayo Clinic, MedlinePlus,
+  and Drugs.com.
 
 ## Apple Health import
 
 On your iPhone: **Health app → profile icon → Export All Health Data**.
-You'll get a `export.zip` by email/AirDrop. Unzip it and upload `export.xml`
-on the Apple Health page. The parser ingests numeric samples (heart rate,
-steps, blood pressure, weight, SpO₂, VO₂ max, etc.).
+You'll get `export.zip` by email / AirDrop. Unzip it and upload `export.xml`
+on the Apple Health page. A large export has hundreds of thousands of
+samples — the first import takes a minute or two.
 
-A large export can have hundreds of thousands of samples — the first import
-takes a minute or two.
+## Data location & backups
 
-## Adding more integrations later
+Everything lives in `./data/`:
 
-Garmin, Fitbit/Google Fit, WHOOP all work the same way: an OAuth route under
-`src/app/api/<vendor>/...` that writes into the `vitals` table with a
-vendor-specific `source` and `type`. The dashboard and chat will pick them up
-automatically.
+- `health.db` — SQLite database (all records, no binaries)
+- `uploads/` — original uploaded files
+
+To back up, copy the `data/` folder. To move between machines, copy it over.
+To start fresh, delete `data/`.
+
+You can also point somewhere else via `DATA_DIR=/path/to/data` in `.env.local`.
+
+## Production (same machine)
+
+```bash
+npm run build
+npm start   # serves on :3000
+```
+
+## Requirements
+
+- Node 20+
+- On Windows, `better-sqlite3` needs the Visual Studio Build Tools
+  (`npm install --global windows-build-tools` once).

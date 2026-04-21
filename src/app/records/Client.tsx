@@ -1,9 +1,8 @@
 "use client";
 import { useRef, useState } from "react";
-import { browserClient } from "@/lib/supabase/client";
-import type { Record_ } from "@/lib/types";
+import type { RecordRow } from "@/lib/db";
 
-export default function RecordsClient({ initial }: { initial: Record_[] }) {
+export default function RecordsClient({ initial }: { initial: RecordRow[] }) {
   const [items, setItems] = useState(initial);
   const [title, setTitle] = useState("");
   const [kind, setKind] = useState("lab");
@@ -12,7 +11,6 @@ export default function RecordsClient({ initial }: { initial: Record_[] }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
-  const sb = browserClient();
 
   async function upload(e: React.FormEvent) {
     e.preventDefault();
@@ -29,7 +27,7 @@ export default function RecordsClient({ initial }: { initial: Record_[] }) {
       if (notes) fd.set("notes", notes);
       const res = await fetch("/api/records/upload", { method: "POST", body: fd });
       if (!res.ok) throw new Error(await res.text());
-      const row = (await res.json()) as Record_;
+      const row = (await res.json()) as RecordRow;
       setItems([row, ...items]);
       setTitle("");
       setTakenOn("");
@@ -42,15 +40,9 @@ export default function RecordsClient({ initial }: { initial: Record_[] }) {
     }
   }
 
-  async function remove(id: string, storage_path: string) {
-    await sb.storage.from("records").remove([storage_path]);
-    await sb.from("records").delete().eq("id", id);
+  async function remove(id: string) {
+    await fetch(`/api/records/${id}`, { method: "DELETE" });
     setItems(items.filter((r) => r.id !== id));
-  }
-
-  async function download(storage_path: string) {
-    const { data } = await sb.storage.from("records").createSignedUrl(storage_path, 60);
-    if (data?.signedUrl) window.open(data.signedUrl, "_blank");
   }
 
   return (
@@ -130,10 +122,10 @@ export default function RecordsClient({ initial }: { initial: Record_[] }) {
                 )}
               </div>
               <div className="flex gap-2">
-                <button className="btn" onClick={() => download(r.storage_path)}>
+                <a href={`/api/records/${r.id}`} target="_blank" rel="noreferrer" className="btn">
                   View
-                </button>
-                <button className="btn" onClick={() => remove(r.id, r.storage_path)}>
+                </a>
+                <button className="btn" onClick={() => remove(r.id)}>
                   Delete
                 </button>
               </div>

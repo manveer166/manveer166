@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import type { ChatMessage } from "@/lib/types";
+import type { ChatMessage } from "@/lib/db";
 
 export default function ChatClient({ initial }: { initial: ChatMessage[] }) {
   const [messages, setMessages] = useState(initial);
@@ -19,7 +19,6 @@ export default function ChatClient({ initial }: { initial: ChatMessage[] }) {
     setBusy(true);
     const userMsg: ChatMessage = {
       id: crypto.randomUUID(),
-      user_id: "",
       role: "user",
       content: text,
       created_at: new Date().toISOString(),

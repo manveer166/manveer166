@@ -1,7 +1,6 @@
 "use client";
 import { useState, useTransition } from "react";
-import { browserClient } from "@/lib/supabase/client";
-import type { Symptom } from "@/lib/types";
+import type { SymptomRow } from "@/lib/db";
 
 const empty = {
   description: "",
@@ -13,39 +12,39 @@ const empty = {
 
 const MOOD_LABELS = ["😞", "😕", "😐", "🙂", "😄"];
 
-export default function SymptomsClient({ initial }: { initial: Symptom[] }) {
+async function api(path: string, method: string, body?: unknown) {
+  const res = await fetch(path, {
+    method,
+    headers: body ? { "Content-Type": "application/json" } : undefined,
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export default function SymptomsClient({ initial }: { initial: SymptomRow[] }) {
   const [items, setItems] = useState(initial);
   const [form, setForm] = useState(empty);
   const [pending, start] = useTransition();
-  const sb = browserClient();
 
   async function add(e: React.FormEvent) {
     e.preventDefault();
     if (!form.description.trim()) return;
     start(async () => {
-      const { data: user } = await sb.auth.getUser();
-      const uid = user.user?.id;
-      if (!uid) return;
-      const payload = {
-        user_id: uid,
+      const row = (await api("/api/symptoms", "POST", {
         description: form.description.trim(),
         severity: form.severity,
         mood: form.mood,
         notes: form.notes || null,
-        occurred_at: form.occurred_at
-          ? new Date(form.occurred_at).toISOString()
-          : new Date().toISOString(),
-      };
-      const { data } = await sb.from("symptoms").insert(payload).select().single();
-      if (data) {
-        setItems([data, ...items]);
-        setForm(empty);
-      }
+        occurred_at: form.occurred_at ? new Date(form.occurred_at).toISOString() : new Date().toISOString(),
+      })) as SymptomRow;
+      setItems([row, ...items]);
+      setForm(empty);
     });
   }
 
   async function remove(id: string) {
-    await sb.from("symptoms").delete().eq("id", id);
+    await api(`/api/symptoms/${id}`, "DELETE");
     setItems(items.filter((s) => s.id !== id));
   }
 
@@ -56,7 +55,7 @@ export default function SymptomsClient({ initial }: { initial: Symptom[] }) {
     <div className="max-w-3xl">
       <h1 className="text-2xl font-semibold mb-2">Symptoms</h1>
       <p className="text-sm text-muted mb-6">
-        Log how you're feeling. Severity 0 (none) to 10 (worst), mood 1 (bad) to 5 (great).
+        Severity 0 (none) to 10 (worst), mood 1 (bad) to 5 (great).
       </p>
 
       <form onSubmit={add} className="card mb-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -109,7 +108,6 @@ export default function SymptomsClient({ initial }: { initial: Symptom[] }) {
             className="input"
             value={form.notes}
             onChange={(e) => setForm({ ...form, notes: e.target.value })}
-            placeholder="After lunch, took ibuprofen"
           />
         </div>
         <button className="btn btn-primary sm:col-span-2 justify-center" disabled={pending}>

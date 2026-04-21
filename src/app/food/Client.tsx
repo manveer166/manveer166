@@ -1,7 +1,6 @@
 "use client";
 import { useMemo, useState, useTransition } from "react";
-import { browserClient } from "@/lib/supabase/client";
-import type { FoodEntry } from "@/lib/types";
+import type { FoodEntry } from "@/lib/db";
 
 const empty = {
   description: "",
@@ -10,6 +9,16 @@ const empty = {
   notes: "",
   eaten_at: "",
 };
+
+async function api(path: string, method: string, body?: unknown) {
+  const res = await fetch(path, {
+    method,
+    headers: body ? { "Content-Type": "application/json" } : undefined,
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
 
 export default function FoodClient({
   initial,
@@ -21,13 +30,8 @@ export default function FoodClient({
   const [items, setItems] = useState(initial);
   const [form, setForm] = useState(empty);
   const [pending, start] = useTransition();
-  const sb = browserClient();
 
-  const allergenSet = useMemo(
-    () => allergens.map((a) => a.toLowerCase()),
-    [allergens],
-  );
-
+  const allergenSet = useMemo(() => allergens.map((a) => a.toLowerCase()), [allergens]);
   function scan(desc: string): string[] {
     const lower = desc.toLowerCase();
     return allergenSet.filter((a) => a && lower.includes(a));
@@ -38,29 +42,22 @@ export default function FoodClient({
     const desc = form.description.trim();
     if (!desc) return;
     start(async () => {
-      const { data: user } = await sb.auth.getUser();
-      const uid = user.user?.id;
-      if (!uid) return;
       const flagged = scan(desc);
-      const payload = {
-        user_id: uid,
+      const row = (await api("/api/food", "POST", {
         description: desc,
         meal: form.meal,
         calories: form.calories ? Number(form.calories) : null,
         notes: form.notes || null,
         eaten_at: form.eaten_at ? new Date(form.eaten_at).toISOString() : new Date().toISOString(),
-        flagged_allergens: flagged.length ? flagged : null,
-      };
-      const { data } = await sb.from("food_entries").insert(payload).select().single();
-      if (data) {
-        setItems([data, ...items]);
-        setForm(empty);
-      }
+        flagged_allergens: flagged,
+      })) as FoodEntry;
+      setItems([row, ...items]);
+      setForm(empty);
     });
   }
 
   async function remove(id: string) {
-    await sb.from("food_entries").delete().eq("id", id);
+    await api(`/api/food/${id}`, "DELETE");
     setItems(items.filter((i) => i.id !== id));
   }
 
@@ -159,9 +156,7 @@ export default function FoodClient({
                 <p className="text-sm mt-1">{i.description}</p>
                 {i.notes && <p className="text-xs text-muted mt-1">{i.notes}</p>}
                 {i.flagged_allergens && i.flagged_allergens.length > 0 && (
-                  <p className="text-bad text-xs mt-1">
-                    ⚠ {i.flagged_allergens.join(", ")}
-                  </p>
+                  <p className="text-bad text-xs mt-1">⚠ {i.flagged_allergens.join(", ")}</p>
                 )}
               </div>
               <button className="btn" onClick={() => remove(i.id)}>

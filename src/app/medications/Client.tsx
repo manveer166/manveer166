@@ -1,7 +1,6 @@
 "use client";
 import { useState, useTransition } from "react";
-import { browserClient } from "@/lib/supabase/client";
-import type { Medication, MedicationDose } from "@/lib/types";
+import type { Medication, Dose } from "@/lib/db";
 
 const empty = {
   name: "",
@@ -15,7 +14,15 @@ const empty = {
   active: true,
 };
 
-type Dose = Pick<MedicationDose, "id" | "medication_id" | "taken_at" | "skipped">;
+async function api(path: string, method: string, body?: unknown) {
+  const res = await fetch(path, {
+    method,
+    headers: body ? { "Content-Type": "application/json" } : undefined,
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
 
 export default function MedicationsClient({
   initial,
@@ -28,44 +35,33 @@ export default function MedicationsClient({
   const [doses, setDoses] = useState(initialDoses);
   const [form, setForm] = useState(empty);
   const [pending, start] = useTransition();
-  const sb = browserClient();
 
   async function add(e: React.FormEvent) {
     e.preventDefault();
     start(async () => {
-      const { data: user } = await sb.auth.getUser();
-      const uid = user.user?.id;
-      if (!uid) return;
-      const payload = { ...form, user_id: uid, started_on: form.started_on || null };
-      const { data } = await sb.from("medications").insert(payload).select().single();
-      if (data) {
-        setItems([data, ...items]);
-        setForm(empty);
-      }
+      const row = (await api("/api/medications", "POST", {
+        ...form,
+        started_on: form.started_on || null,
+      })) as Medication;
+      setItems([row, ...items]);
+      setForm(empty);
     });
   }
 
   async function toggle(id: string, active: boolean) {
-    await sb.from("medications").update({ active }).eq("id", id);
-    setItems(items.map((m) => (m.id === id ? { ...m, active } : m)));
+    const row = (await api(`/api/medications/${id}`, "PATCH", { active })) as Medication;
+    setItems(items.map((m) => (m.id === id ? row : m)));
   }
 
   async function remove(id: string) {
-    await sb.from("medications").delete().eq("id", id);
+    await api(`/api/medications/${id}`, "DELETE");
     setItems(items.filter((m) => m.id !== id));
     setDoses(doses.filter((d) => d.medication_id !== id));
   }
 
   async function logDose(medication_id: string, skipped: boolean) {
-    const { data: user } = await sb.auth.getUser();
-    const uid = user.user?.id;
-    if (!uid) return;
-    const { data } = await sb
-      .from("medication_doses")
-      .insert({ user_id: uid, medication_id, skipped, taken_at: new Date().toISOString() })
-      .select()
-      .single();
-    if (data) setDoses([data, ...doses]);
+    const row = (await api("/api/doses", "POST", { medication_id, skipped })) as Dose;
+    setDoses([row, ...doses]);
   }
 
   const todayKey = new Date().toDateString();
@@ -125,7 +121,6 @@ export default function MedicationsClient({
             rows={2}
             value={form.benefits}
             onChange={(e) => setForm({ ...form, benefits: e.target.value })}
-            placeholder="Lowers LDL cholesterol"
           />
         </div>
         <div className="sm:col-span-2">
@@ -144,7 +139,6 @@ export default function MedicationsClient({
             rows={2}
             value={form.instructions}
             onChange={(e) => setForm({ ...form, instructions: e.target.value })}
-            placeholder="Avoid grapefruit juice"
           />
         </div>
         <button className="btn btn-primary sm:col-span-2 justify-center" disabled={pending}>
@@ -167,7 +161,9 @@ export default function MedicationsClient({
                     <h3 className="font-semibold">{m.name}</h3>
                     {m.dosage && <span className="pill">{m.dosage}</span>}
                     {!m.active && <span className="pill text-warn">inactive</span>}
-                    {m.active && takenToday && <span className="pill text-good">taken today</span>}
+                    {m.active === 1 && takenToday && (
+                      <span className="pill text-good">taken today</span>
+                    )}
                   </div>
                   {m.schedule && <p className="text-sm text-muted mt-1">{m.schedule}</p>}
                   {m.benefits && (
@@ -188,10 +184,10 @@ export default function MedicationsClient({
                       {m.instructions}
                     </p>
                   )}
-                  {m.active && <Adherence doses={medDoses} />}
+                  {m.active === 1 && <Adherence doses={medDoses} />}
                 </div>
                 <div className="flex flex-col gap-2">
-                  {m.active && (
+                  {m.active === 1 && (
                     <>
                       <button
                         className="btn btn-primary"
@@ -205,8 +201,8 @@ export default function MedicationsClient({
                       </button>
                     </>
                   )}
-                  <button className="btn" onClick={() => toggle(m.id, !m.active)}>
-                    {m.active ? "Inactive" : "Active"}
+                  <button className="btn" onClick={() => toggle(m.id, m.active !== 1)}>
+                    {m.active === 1 ? "Inactive" : "Active"}
                   </button>
                   <button className="btn" onClick={() => remove(m.id)}>
                     Delete
@@ -231,7 +227,7 @@ function Adherence({ doses }: { doses: Dose[] }) {
     days.push({
       key,
       taken: !!match && !match.skipped,
-      skipped: !!match && match.skipped,
+      skipped: !!match && !!match.skipped,
     });
   }
   const takenCount = days.filter((d) => d.taken).length;
@@ -249,9 +245,7 @@ function Adherence({ doses }: { doses: Dose[] }) {
             />
           ))}
         </div>
-        <span className="text-xs text-muted">
-          {takenCount}/14 days
-        </span>
+        <span className="text-xs text-muted">{takenCount}/14 days</span>
       </div>
     </div>
   );

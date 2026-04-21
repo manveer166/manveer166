@@ -1,15 +1,8 @@
-import { serverClient, requireUser } from "@/lib/supabase/server";
 import RecordsClient from "./Client";
+import { q } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
-export default async function RecordsPage() {
-  const user = await requireUser();
-  if (!user) return null;
-  const sb = await serverClient();
-  const { data } = await sb
-    .from("records")
-    .select("*")
-    .order("taken_on", { ascending: false, nullsFirst: false });
-  return <RecordsClient initial={data ?? []} />;
+export default function RecordsPage() {
+  return <RecordsClient initial={q.records(100)} />;
 }

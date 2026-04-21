@@ -1,43 +1,20 @@
-import { serverClient, requireUser } from "@/lib/supabase/server";
 import { labelFor } from "@/lib/vital-types";
 import PrintButton from "./PrintButton";
+import { q } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
-export default async function SummaryPage() {
-  const user = await requireUser();
-  if (!user) return null;
-  const sb = await serverClient();
-
+export default function SummaryPage() {
   const since30 = new Date(Date.now() - 1000 * 60 * 60 * 24 * 30).toISOString();
-
-  const [meds, allergies, records, vitals, symptoms] = await Promise.all([
-    sb
-      .from("medications")
-      .select("name, dosage, schedule, benefits, instructions, started_on, active")
-      .order("active", { ascending: false })
-      .order("name"),
-    sb.from("allergies").select("allergen, severity, reaction, notes").order("allergen"),
-    sb
-      .from("records")
-      .select("title, kind, taken_on, notes")
-      .order("taken_on", { ascending: false, nullsFirst: false })
-      .limit(20),
-    sb
-      .from("vitals")
-      .select("type, value, unit, measured_at")
-      .gte("measured_at", since30)
-      .order("measured_at", { ascending: false }),
-    sb
-      .from("symptoms")
-      .select("occurred_at, description, severity, mood, notes")
-      .gte("occurred_at", since30)
-      .order("occurred_at", { ascending: false }),
-  ]);
+  const meds = q.medications();
+  const allergies = q.allergies();
+  const records = q.records(20);
+  const vitals = q.vitalsSince(since30);
+  const symptoms = q.symptomsSince(since30);
 
   const latestByType = new Map<string, { value: number; unit: string | null; measured_at: string }>();
   const statsByType = new Map<string, { n: number; sum: number; min: number; max: number }>();
-  for (const v of vitals.data ?? []) {
+  for (const v of vitals) {
     if (!latestByType.has(v.type))
       latestByType.set(v.type, { value: v.value, unit: v.unit, measured_at: v.measured_at });
     const s = statsByType.get(v.type) ?? { n: 0, sum: 0, min: Infinity, max: -Infinity };
@@ -48,7 +25,7 @@ export default async function SummaryPage() {
     statsByType.set(v.type, s);
   }
 
-  const activeMeds = (meds.data ?? []).filter((m) => m.active);
+  const activeMeds = meds.filter((m) => m.active === 1);
 
   return (
     <div className="max-w-3xl print:max-w-none">
@@ -64,17 +41,17 @@ export default async function SummaryPage() {
         <header className="border-b border-edge pb-3">
           <h1 className="hidden print:block text-xl font-semibold">Health summary</h1>
           <div className="text-sm text-muted">
-            Prepared for: {user.email} &middot; {new Date().toLocaleDateString()}
+            Generated {new Date().toLocaleDateString()}
           </div>
         </header>
 
         <section>
           <h2 className="font-semibold mb-2">Allergies</h2>
-          {!allergies.data?.length ? (
+          {!allergies.length ? (
             <p className="text-sm text-muted">None reported.</p>
           ) : (
             <ul className="text-sm space-y-1 list-disc pl-5">
-              {allergies.data.map((a, i) => (
+              {allergies.map((a, i) => (
                 <li key={i}>
                   <strong>{a.allergen}</strong>
                   {a.severity ? ` (${a.severity})` : ""}
@@ -141,11 +118,11 @@ export default async function SummaryPage() {
 
         <section>
           <h2 className="font-semibold mb-2">Symptoms — last 30 days</h2>
-          {!symptoms.data?.length ? (
+          {!symptoms.length ? (
             <p className="text-sm text-muted">None logged.</p>
           ) : (
             <ul className="text-sm space-y-1 list-disc pl-5">
-              {symptoms.data.map((s, i) => (
+              {symptoms.map((s, i) => (
                 <li key={i}>
                   {new Date(s.occurred_at).toLocaleDateString()}: {s.description}
                   {s.severity != null ? ` — severity ${s.severity}/10` : ""}
@@ -158,11 +135,11 @@ export default async function SummaryPage() {
 
         <section>
           <h2 className="font-semibold mb-2">Recent records</h2>
-          {!records.data?.length ? (
+          {!records.length ? (
             <p className="text-sm text-muted">None.</p>
           ) : (
             <ul className="text-sm space-y-1 list-disc pl-5">
-              {records.data.map((r, i) => (
+              {records.map((r, i) => (
                 <li key={i}>
                   {r.taken_on ?? "—"}: <strong>{r.title}</strong>
                   {r.kind ? ` (${r.kind})` : ""}

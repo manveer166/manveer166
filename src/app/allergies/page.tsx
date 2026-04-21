@@ -1,12 +1,8 @@
-import { serverClient, requireUser } from "@/lib/supabase/server";
 import AllergiesClient from "./Client";
+import { q } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
-export default async function AllergiesPage() {
-  const user = await requireUser();
-  if (!user) return null;
-  const sb = await serverClient();
-  const { data } = await sb.from("allergies").select("*").order("allergen");
-  return <AllergiesClient initial={data ?? []} />;
+export default function AllergiesPage() {
+  return <AllergiesClient initial={q.allergies()} />;
 }

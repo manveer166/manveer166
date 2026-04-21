@@ -1,16 +1,8 @@
-import { serverClient, requireUser } from "@/lib/supabase/server";
 import SymptomsClient from "./Client";
+import { q } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
-export default async function SymptomsPage() {
-  const user = await requireUser();
-  if (!user) return null;
-  const sb = await serverClient();
-  const { data } = await sb
-    .from("symptoms")
-    .select("*")
-    .order("occurred_at", { ascending: false })
-    .limit(100);
-  return <SymptomsClient initial={data ?? []} />;
+export default function SymptomsPage() {
+  return <SymptomsClient initial={q.symptomsRecent(100)} />;
 }

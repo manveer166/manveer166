@@ -1,7 +1,6 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { browserClient } from "@/lib/supabase/client";
 import clsx from "clsx";
 
 const links = [
@@ -19,7 +18,7 @@ const links = [
   { href: "/lookup", label: "Health lookup" },
 ];
 
-export default function Nav({ email }: { email: string }) {
+export default function Nav() {
   const path = usePathname();
   return (
     <aside className="w-64 shrink-0 border-r border-edge p-5 flex flex-col gap-1 bg-[#0d0f13]">
@@ -37,16 +36,7 @@ export default function Nav({ email }: { email: string }) {
         </Link>
       ))}
       <div className="mt-auto pt-4 border-t border-edge text-xs text-muted">
-        <div className="truncate">{email}</div>
-        <button
-          className="mt-2 text-muted hover:text-ink"
-          onClick={async () => {
-            await browserClient().auth.signOut();
-            window.location.href = "/login";
-          }}
-        >
-          Sign out
-        </button>
+        <div>Local mode · data in ./data</div>
       </div>
     </aside>
   );

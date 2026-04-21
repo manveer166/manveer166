@@ -1,24 +1,24 @@
 "use client";
 import { useState, useTransition } from "react";
-import { browserClient } from "@/lib/supabase/client";
 import { MANUAL_VITAL_TYPES, labelFor } from "@/lib/vital-types";
+import type { Vital } from "@/lib/db";
 
-type Row = {
-  id: string;
-  type: string;
-  value: number;
-  unit: string | null;
-  measured_at: string;
-  source: string | null;
-};
+async function api(path: string, method: string, body?: unknown) {
+  const res = await fetch(path, {
+    method,
+    headers: body ? { "Content-Type": "application/json" } : undefined,
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
 
-export default function VitalsClient({ initial }: { initial: Row[] }) {
+export default function VitalsClient({ initial }: { initial: Vital[] }) {
   const [items, setItems] = useState(initial);
   const [type, setType] = useState<string>(MANUAL_VITAL_TYPES[0].type);
   const [value, setValue] = useState("");
   const [when, setWhen] = useState("");
   const [pending, start] = useTransition();
-  const sb = browserClient();
 
   const meta = MANUAL_VITAL_TYPES.find((t) => t.type === type)!;
 
@@ -26,28 +26,21 @@ export default function VitalsClient({ initial }: { initial: Row[] }) {
     e.preventDefault();
     if (!value) return;
     start(async () => {
-      const { data: user } = await sb.auth.getUser();
-      const uid = user.user?.id;
-      if (!uid) return;
-      const payload = {
-        user_id: uid,
+      const row = (await api("/api/vitals", "POST", {
         type,
         value: Number(value),
         unit: meta.unit || null,
         measured_at: when ? new Date(when).toISOString() : new Date().toISOString(),
         source: "manual",
-      };
-      const { data } = await sb.from("vitals").insert(payload).select().single();
-      if (data) {
-        setItems([data, ...items]);
-        setValue("");
-        setWhen("");
-      }
+      })) as Vital;
+      setItems([row, ...items]);
+      setValue("");
+      setWhen("");
     });
   }
 
   async function remove(id: string) {
-    await sb.from("vitals").delete().eq("id", id);
+    await api(`/api/vitals/${id}`, "DELETE");
     setItems(items.filter((v) => v.id !== id));
   }
 

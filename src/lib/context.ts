@@ -1,55 +1,22 @@
-import { SupabaseClient } from "@supabase/supabase-js";
+import { q, deserializeFood } from "./db";
 
-export async function buildUserContext(sb: SupabaseClient, userId: string) {
-  const [meds, allergies, records, vitals, food, symptoms] = await Promise.all([
-    sb
-      .from("medications")
-      .select("name, dosage, schedule, benefits, side_effects, instructions, started_on, active")
-      .eq("user_id", userId)
-      .order("active", { ascending: false }),
-    sb
-      .from("allergies")
-      .select("allergen, severity, reaction, notes")
-      .eq("user_id", userId),
-    sb
-      .from("records")
-      .select("title, kind, taken_on, notes, extracted_text")
-      .eq("user_id", userId)
-      .order("taken_on", { ascending: false })
-      .limit(25),
-    sb
-      .from("vitals")
-      .select("type, value, unit, measured_at, source")
-      .eq("user_id", userId)
-      .order("measured_at", { ascending: false })
-      .limit(200),
-    sb
-      .from("food_entries")
-      .select("eaten_at, meal, description, calories, flagged_allergens")
-      .eq("user_id", userId)
-      .order("eaten_at", { ascending: false })
-      .limit(30),
-    sb
-      .from("symptoms")
-      .select("occurred_at, description, severity, mood, notes")
-      .eq("user_id", userId)
-      .order("occurred_at", { ascending: false })
-      .limit(30),
-  ]);
+export function buildUserContext(): string {
+  const meds = q.medications();
+  const allergies = q.allergies();
+  const records = q.records(25);
+  const vitals = q.vitalsRecent(200);
+  const food = q.foodRecent(30).map((r) => deserializeFood(r as typeof r & { flagged_allergens: unknown }));
+  const symptoms = q.symptomsRecent(30);
 
-  const latestByType = new Map<string, { value: number; unit: string | null; measured_at: string }>();
-  for (const v of vitals.data ?? []) {
-    if (!latestByType.has(v.type)) {
-      latestByType.set(v.type, { value: v.value, unit: v.unit, measured_at: v.measured_at });
-    }
-  }
+  const latestByType = new Map<string, (typeof vitals)[number]>();
+  for (const v of vitals) if (!latestByType.has(v.type)) latestByType.set(v.type, v);
 
   const lines: string[] = [];
   lines.push("# User profile");
   lines.push("");
   lines.push("## Allergies");
-  if (!allergies.data?.length) lines.push("_None recorded._");
-  for (const a of allergies.data ?? []) {
+  if (!allergies.length) lines.push("_None recorded._");
+  for (const a of allergies) {
     lines.push(
       `- **${a.allergen}** (${a.severity ?? "unknown severity"})${
         a.reaction ? ` — reaction: ${a.reaction}` : ""
@@ -59,12 +26,10 @@ export async function buildUserContext(sb: SupabaseClient, userId: string) {
 
   lines.push("");
   lines.push("## Current medications");
-  const active = (meds.data ?? []).filter((m) => m.active);
+  const active = meds.filter((m) => m.active);
   if (!active.length) lines.push("_None recorded._");
   for (const m of active) {
-    lines.push(
-      `- **${m.name}** ${m.dosage ?? ""} ${m.schedule ? `(${m.schedule})` : ""}`.trim(),
-    );
+    lines.push(`- **${m.name}** ${m.dosage ?? ""} ${m.schedule ? `(${m.schedule})` : ""}`.trim());
     if (m.benefits) lines.push(`    - purpose: ${m.benefits}`);
     if (m.side_effects) lines.push(`    - side effects: ${m.side_effects}`);
     if (m.instructions) lines.push(`    - instructions: ${m.instructions}`);
@@ -78,12 +43,10 @@ export async function buildUserContext(sb: SupabaseClient, userId: string) {
   }
 
   lines.push("");
-  lines.push("## Recent food log (last 30 entries)");
-  if (!food.data?.length) lines.push("_No food logged._");
-  for (const f of food.data ?? []) {
-    const flagged = f.flagged_allergens?.length
-      ? ` [⚠ ${f.flagged_allergens.join(", ")}]`
-      : "";
+  lines.push("## Recent food log (last 30)");
+  if (!food.length) lines.push("_No food logged._");
+  for (const f of food) {
+    const flagged = f.flagged_allergens?.length ? ` [⚠ ${f.flagged_allergens.join(", ")}]` : "";
     lines.push(
       `- ${f.eaten_at}${f.meal ? ` (${f.meal})` : ""}: ${f.description}${
         f.calories ? ` — ${f.calories} kcal` : ""
@@ -93,8 +56,8 @@ export async function buildUserContext(sb: SupabaseClient, userId: string) {
 
   lines.push("");
   lines.push("## Recent symptoms (last 30)");
-  if (!symptoms.data?.length) lines.push("_No symptoms logged._");
-  for (const s of symptoms.data ?? []) {
+  if (!symptoms.length) lines.push("_No symptoms logged._");
+  for (const s of symptoms) {
     lines.push(
       `- ${s.occurred_at}: ${s.description}${
         s.severity != null ? ` — severity ${s.severity}/10` : ""
@@ -104,8 +67,8 @@ export async function buildUserContext(sb: SupabaseClient, userId: string) {
 
   lines.push("");
   lines.push("## Recent medical records");
-  if (!records.data?.length) lines.push("_None uploaded._");
-  for (const r of records.data ?? []) {
+  if (!records.length) lines.push("_None uploaded._");
+  for (const r of records) {
     lines.push(`### ${r.title}${r.taken_on ? ` (${r.taken_on})` : ""}`);
     if (r.kind) lines.push(`Type: ${r.kind}`);
     if (r.notes) lines.push(r.notes);

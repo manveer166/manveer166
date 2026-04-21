@@ -1,34 +1,24 @@
-import { requireUser, serverClient } from "@/lib/supabase/server";
 import { claude, MODEL, SYSTEM_PROMPT } from "@/lib/claude";
 import { buildUserContext } from "@/lib/context";
+import { q, deserializeFood, type FoodEntry } from "@/lib/db";
 
 export const runtime = "nodejs";
 
 export async function POST() {
-  const user = await requireUser();
-  if (!user) return new Response("Unauthorized", { status: 401 });
+  if (!process.env.ANTHROPIC_API_KEY)
+    return new Response("ANTHROPIC_API_KEY not set", { status: 503 });
 
-  const sb = await serverClient();
-  const since = new Date(Date.now() - 1000 * 60 * 60 * 24 * 7).toISOString();
+  const sinceIso = new Date(Date.now() - 1000 * 60 * 60 * 24 * 7).toISOString();
+  const vitals = q.vitalsSince(sinceIso);
+  const foodRaw = q.foodSince(sinceIso) as (FoodEntry & { flagged_allergens: unknown })[];
+  const food = foodRaw.map(deserializeFood);
+  const profile = buildUserContext();
 
-  const [vitals, food, profile] = await Promise.all([
-    sb
-      .from("vitals")
-      .select("type, value, unit, measured_at, source")
-      .gte("measured_at", since)
-      .eq("user_id", user.id)
-      .order("measured_at", { ascending: true }),
-    sb
-      .from("food_entries")
-      .select("eaten_at, meal, description, calories, flagged_allergens")
-      .gte("eaten_at", since)
-      .eq("user_id", user.id)
-      .order("eaten_at", { ascending: true }),
-    buildUserContext(sb, user.id),
-  ]);
-
-  const summary: Record<string, { n: number; sum: number; min: number; max: number; unit: string | null }> = {};
-  for (const v of vitals.data ?? []) {
+  const summary: Record<
+    string,
+    { n: number; sum: number; min: number; max: number; unit: string | null }
+  > = {};
+  for (const v of vitals) {
     const s = (summary[v.type] ??= {
       n: 0,
       sum: 0,
@@ -42,15 +32,16 @@ export async function POST() {
     s.max = Math.max(s.max, v.value);
   }
 
-  const vitalsLines = Object.entries(summary)
-    .map(
-      ([t, s]) =>
-        `- ${t.replace(/^HK.*Identifier/, "")}: avg ${(s.sum / s.n).toFixed(1)} ${s.unit ?? ""}, range ${s.min.toFixed(1)}–${s.max.toFixed(1)} (${s.n} readings)`,
-    )
-    .join("\n") || "_No vitals recorded this week._";
+  const vitalsLines =
+    Object.entries(summary)
+      .map(
+        ([t, s]) =>
+          `- ${t.replace(/^HK.*Identifier/, "")}: avg ${(s.sum / s.n).toFixed(1)} ${s.unit ?? ""}, range ${s.min.toFixed(1)}–${s.max.toFixed(1)} (${s.n} readings)`,
+      )
+      .join("\n") || "_No vitals recorded this week._";
 
   const foodLines =
-    (food.data ?? [])
+    food
       .map(
         (f) =>
           `- ${f.eaten_at.slice(0, 10)}${f.meal ? ` (${f.meal})` : ""}: ${f.description}${

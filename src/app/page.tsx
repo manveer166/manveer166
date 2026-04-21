@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { serverClient, requireUser } from "@/lib/supabase/server";
 import { Sparkline } from "@/components/Chart";
 import { labelFor } from "@/lib/vital-types";
 import WeeklyDigest from "./WeeklyDigest";
+import { q } from "@/lib/db";
+import { ANTHROPIC_ENABLED } from "@/lib/env";
 
 export const dynamic = "force-dynamic";
 
@@ -17,33 +18,18 @@ const DASHBOARD_TYPES = [
   "HKQuantityTypeIdentifierBloodGlucose",
 ];
 
-export default async function Dashboard() {
-  const user = await requireUser();
-  if (!user) return null;
-  const sb = await serverClient();
-
+export default function Dashboard() {
   const since = new Date(Date.now() - 1000 * 60 * 60 * 24 * 30).toISOString();
 
-  const [{ count: medsCount }, { count: allergyCount }, { count: recordCount }, { count: foodCount }, vitals] =
-    await Promise.all([
-      sb.from("medications").select("*", { count: "exact", head: true }).eq("active", true),
-      sb.from("allergies").select("*", { count: "exact", head: true }),
-      sb.from("records").select("*", { count: "exact", head: true }),
-      sb
-        .from("food_entries")
-        .select("*", { count: "exact", head: true })
-        .gte("eaten_at", since),
-      sb
-        .from("vitals")
-        .select("type, value, unit, measured_at")
-        .gte("measured_at", since)
-        .order("measured_at", { ascending: true })
-        .limit(10000),
-    ]);
+  const medsCount = q.countActiveMeds();
+  const allergyCount = q.count("allergies");
+  const recordCount = q.count("records");
+  const foodCount = q.countFoodSince(since);
+  const vitals = q.vitalsSince(since);
 
   type Series = { unit: string | null; series: { t: number; v: number }[] };
   const byType = new Map<string, Series>();
-  for (const v of vitals.data ?? []) {
+  for (const v of vitals) {
     const entry: Series = byType.get(v.type) ?? { unit: v.unit, series: [] };
     entry.series.push({ t: new Date(v.measured_at).getTime(), v: v.value });
     byType.set(v.type, entry);
@@ -58,10 +44,10 @@ export default async function Dashboard() {
       <h1 className="text-2xl font-semibold mb-6">Dashboard</h1>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-        <StatCard label="Active medications" value={medsCount ?? 0} href="/medications" />
-        <StatCard label="Known allergies" value={allergyCount ?? 0} href="/allergies" />
-        <StatCard label="Medical records" value={recordCount ?? 0} href="/records" />
-        <StatCard label="Food entries (30d)" value={foodCount ?? 0} href="/food" />
+        <StatCard label="Active medications" value={medsCount} href="/medications" />
+        <StatCard label="Known allergies" value={allergyCount} href="/allergies" />
+        <StatCard label="Medical records" value={recordCount} href="/records" />
+        <StatCard label="Food entries (30d)" value={foodCount} href="/food" />
       </div>
 
       <section className="card mb-6">
@@ -103,7 +89,17 @@ export default async function Dashboard() {
         )}
       </section>
 
-      <WeeklyDigest />
+      {ANTHROPIC_ENABLED ? (
+        <WeeklyDigest />
+      ) : (
+        <section className="card">
+          <h2 className="font-semibold mb-1">Weekly summary</h2>
+          <p className="text-sm text-muted">
+            Add <code>ANTHROPIC_API_KEY</code> to <code>.env.local</code> and restart to enable the
+            AI-generated weekly digest.
+          </p>
+        </section>
+      )}
 
       <section className="card mt-6">
         <h2 className="font-semibold mb-2">Disclaimer</h2>

@@ -1,17 +1,23 @@
-import { serverClient, requireUser } from "@/lib/supabase/server";
 import ChatClient from "./Client";
-import type { ChatMessage } from "@/lib/types";
+import { q } from "@/lib/db";
+import { ANTHROPIC_ENABLED } from "@/lib/env";
 
 export const dynamic = "force-dynamic";
 
-export default async function ChatPage() {
-  const user = await requireUser();
-  if (!user) return null;
-  const sb = await serverClient();
-  const { data } = await sb
-    .from("chat_messages")
-    .select("*")
-    .order("created_at", { ascending: true })
-    .limit(100);
-  return <ChatClient initial={(data as ChatMessage[]) ?? []} />;
+export default function ChatPage() {
+  if (!ANTHROPIC_ENABLED) {
+    return (
+      <div className="max-w-2xl">
+        <h1 className="text-2xl font-semibold mb-2">Ask my assistant</h1>
+        <div className="card">
+          <p className="text-sm text-muted">
+            The AI assistant needs an Anthropic API key. Add{" "}
+            <code className="text-ink">ANTHROPIC_API_KEY=sk-ant-...</code> to{" "}
+            <code className="text-ink">.env.local</code> and restart <code>npm run dev</code>.
+          </p>
+        </div>
+      </div>
+    );
+  }
+  return <ChatClient initial={q.chatHistory(100)} />;
 }

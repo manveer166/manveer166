@@ -1,15 +1,8 @@
-import { serverClient, requireUser } from "@/lib/supabase/server";
 import { labelFor } from "@/lib/vital-types";
 import { LineChart } from "@/components/Chart";
+import { q, type Vital } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
-
-type Vital = {
-  type: string;
-  value: number;
-  unit: string | null;
-  measured_at: string;
-};
 
 function groupByDay(rows: Vital[]): { t: number; v: number }[] {
   const days = new Map<string, { sum: number; n: number; t: number }>();
@@ -26,21 +19,12 @@ function groupByDay(rows: Vital[]): { t: number; v: number }[] {
     .sort((a, b) => a.t - b.t);
 }
 
-export default async function TrendsPage() {
-  const user = await requireUser();
-  if (!user) return null;
-  const sb = await serverClient();
-
+export default function TrendsPage() {
   const since = new Date(Date.now() - 1000 * 60 * 60 * 24 * 180).toISOString();
-  const { data } = await sb
-    .from("vitals")
-    .select("type, value, unit, measured_at")
-    .gte("measured_at", since)
-    .order("measured_at", { ascending: true })
-    .limit(20000);
+  const rows = q.vitalsSince(since);
 
   const byType = new Map<string, Vital[]>();
-  for (const r of data ?? []) {
+  for (const r of rows) {
     const arr = byType.get(r.type) ?? [];
     arr.push(r);
     byType.set(r.type, arr);
