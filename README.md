@@ -1,83 +1,74 @@
-# Personal Health Dashboard — local
+# Ember — a live widget for the two of you
 
-A single-user web app that tracks medications, allergies, food, symptoms,
-vitals, and medical records, with an optional Claude-powered assistant that
-answers questions grounded in your own data.
+A mobile-first couples app focused on a **live widget** that keeps your
+partner present on your screen. Inspired by Candle, with more emphasis on
+real-time presence (thumb sync, partner activity, instant photo-to-widget,
+doodles), zero accounts, and zero ads.
 
-**All data stays on your machine** — SQLite database file + uploaded records
-in `./data/`. No cloud, no accounts, no login.
+> Built as a Next.js PWA so the same code runs on iOS, Android, and the web.
+> Install it from the browser's "Add to Home Screen" — it opens fullscreen
+> like a native app, with a real icon, splash, and offline-friendly shell.
+> To publish to the App Store / Play Store later, wrap with
+> [Capacitor](https://capacitorjs.com) (one command).
 
-**Not medical advice.** Informational tool only.
+## What's in it
+
+- **Live Widget home** — a beating, animated card with your partner's
+  current activity, presence dot, latest photo / doodle / kiss they sent,
+  a thumb-sync ring you both hold to feel each other, today's prompt, and
+  the weekly streak strip.
+- **Connect** — today's prompt, "send to their widget" photo flow,
+  freehand doodle, daily challenges, and a small arcade (Who's More Likely,
+  bucket list).
+- **Memories** — every photo, question answered, challenge, and bucket-list
+  item, grouped by day. Filters for Today / Photos / Questions.
+- **Flame** — your streak. One tiny action a day keeps it lit. Big animated
+  flame, weekly dots, unlockable milestones.
+- **You** — pair with someone via a code, pick a name, emoji, and gradient
+  for each of you.
+
+## The "live widget" idea
+
+True OS home-screen widgets need native code (a WidgetKit extension on iOS,
+a Glance widget on Android). This repo ships the **in-app live widget** —
+the centerpiece of the home screen — which already does the things widgets
+do (real-time presence, latest moment, thumb sync, streak). When you wrap
+with Capacitor for the stores, drop in a thin native widget that mirrors
+this same data via shared user-defaults — the heavy lifting is done.
 
 ## Quick start
 
 ```bash
-# 1. Install (needs Node 20+)
 npm install
-
-# 2. (optional) add your Anthropic key to enable the AI
-cp .env.example .env.local
-# then edit .env.local and set ANTHROPIC_API_KEY=sk-ant-...
-
-# 3. Run
 npm run dev
-# → http://localhost:3000
+# open http://localhost:3000 on your phone
 ```
 
-That's it. On first load it creates `./data/health.db` and `./data/uploads/`.
+Then in mobile Safari / Chrome: share → "Add to Home Screen". The app
+launches fullscreen as **Ember**.
 
-## What you get
-
-- **Dashboard** — active-med count, allergy count, record count, food-entries
-  in the last 30 days; 30-day sparklines for each vital.
-- **Ask my assistant** *(needs Anthropic key)* — Claude streams answers grounded
-  in your entire profile (meds, allergies, food, symptoms, vitals, records).
-- **Medications** — name, dosage, schedule, benefits, side effects, instructions;
-  "Log dose" / "Skipped" buttons; 14-day adherence strip per med.
-- **Allergies** — allergen, severity, reaction.
-- **Food log** — manual entries auto-scanned against your allergies, with a
-  calorie tally.
-- **Symptoms** — severity (0–10), mood (1–5), free text.
-- **Vitals** — manual entry for BP, HR, weight, SpO₂, glucose, BMI, temp,
-  respiratory rate.
-- **Trends** — per-metric daily-average charts for the last 180 days.
-- **Medical records** — upload PDFs / images / text. With an Anthropic key,
-  Claude transcribes + summarizes lab results and flags out-of-range values.
-- **Apple Health** — upload `export.xml` and we parse heart rate, steps, weight,
-  BP, SpO₂, VO₂ max, sleep, etc. into the `vitals` table.
-- **Doctor summary** — a printable one-pager (`⌘/Ctrl-P` → Save as PDF) with
-  allergies, current meds, 30-day vital ranges, recent symptoms, recent records.
-- **Health lookup** — one-click search across WebMD, Mayo Clinic, MedlinePlus,
-  and Drugs.com.
-
-## Apple Health import
-
-On your iPhone: **Health app → profile icon → Export All Health Data**.
-You'll get `export.zip` by email / AirDrop. Unzip it and upload `export.xml`
-on the Apple Health page. A large export has hundreds of thousands of
-samples — the first import takes a minute or two.
-
-## Data location & backups
-
-Everything lives in `./data/`:
-
-- `health.db` — SQLite database (all records, no binaries)
-- `uploads/` — original uploaded files
-
-To back up, copy the `data/` folder. To move between machines, copy it over.
-To start fresh, delete `data/`.
-
-You can also point somewhere else via `DATA_DIR=/path/to/data` in `.env.local`.
-
-## Production (same machine)
+## Wrapping for iOS / Android stores
 
 ```bash
-npm run build
-npm start   # serves on :3000
+npm i -D @capacitor/core @capacitor/cli @capacitor/ios @capacitor/android
+npx cap init Ember app.ember --web-dir=out
+npm run build && next export   # or use static-export config
+npx cap add ios && npx cap add android
+npx cap sync && npx cap open ios   # then archive in Xcode
 ```
 
-## Requirements
+(Capacitor wraps the same React UI in a WebView, plus gives you native
+APIs for camera, haptics, push notifications, and a real home-screen
+widget extension when you're ready.)
 
-- Node 20+
-- On Windows, `better-sqlite3` needs the Visual Studio Build Tools
-  (`npm install --global windows-build-tools` once).
+## Stack
+
+- Next.js 15 + React 19, App Router
+- Tailwind CSS
+- Client-only state in `localStorage` (no backend yet — single-device demo
+  with a believable simulated partner so the live widget actually feels alive)
+
+## Privacy
+
+No accounts, no servers, no ads. Everything lives in your browser's
+`localStorage`. Wipe it from **You → unpair & wipe data**.

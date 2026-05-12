@@ -1,39 +1,104 @@
+@import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500;1,600&display=swap");
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
   color-scheme: dark;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-top: env(safe-area-inset-top, 0px);
 }
 
 html, body {
-  background: #0b0d10;
-  color: #e6e8eb;
+  background: #08070c;
+  color: #f4ecff;
+  overscroll-behavior-y: contain;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  background:
+    radial-gradient(1100px 700px at 80% -10%, rgba(255, 122, 69, 0.18), transparent 60%),
+    radial-gradient(900px 600px at -10% 30%, rgba(139, 92, 246, 0.20), transparent 60%),
+    radial-gradient(800px 800px at 50% 110%, rgba(255, 77, 141, 0.16), transparent 60%),
+    #08070c;
+  background-attachment: fixed;
+}
+
+.glass {
+  background: linear-gradient(180deg, rgba(26, 23, 34, 0.78), rgba(19, 17, 26, 0.62));
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .card {
-  @apply bg-panel border border-edge rounded-xl p-5;
+  @apply glass rounded-3xl p-5;
 }
 
 .btn {
-  @apply inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-edge hover:bg-[#2b3038] text-ink text-sm;
+  @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-full
+         bg-edge/70 hover:bg-edge text-ink text-sm font-medium transition;
 }
 
 .btn-primary {
-  @apply bg-accent text-black hover:bg-[#9ed3ff];
+  @apply text-black font-semibold;
+  background: linear-gradient(135deg, #ffb14a, #ff7a45 55%, #ff4d8d);
+  box-shadow: 0 8px 30px -10px rgba(255, 122, 69, 0.7);
+}
+.btn-primary:hover { filter: brightness(1.07); }
+
+.btn-ghost {
+  @apply bg-transparent border border-edge text-ink/90 hover:bg-edge/40;
 }
 
-.input, .textarea, .select {
-  @apply w-full bg-[#0e1116] border border-edge rounded-lg px-3 py-2 text-sm text-ink outline-none focus:border-accent;
+.input, .textarea {
+  @apply w-full bg-black/30 border border-edge rounded-2xl px-4 py-3 text-base text-ink
+         outline-none focus:border-ember placeholder:text-muted/70;
 }
 
-.label { @apply block text-xs uppercase tracking-wide text-muted mb-1; }
-.pill { @apply inline-flex px-2 py-0.5 rounded-full text-xs border border-edge bg-[#181c22] text-muted; }
-
-@media print {
-  html, body { background: #fff !important; color: #000 !important; }
-  aside, nav, .print\:hidden { display: none !important; }
-  main { padding: 0 !important; }
-  .card { border: 1px solid #ddd !important; background: #fff !important; }
-  a { color: inherit !important; text-decoration: none !important; }
+.label {
+  @apply block text-[11px] uppercase tracking-[.18em] text-muted mb-1.5;
 }
+
+.pill {
+  @apply inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium
+         border border-edge bg-black/30 text-ink/80;
+}
+
+.serif { font-family: "Cormorant Garamond", ui-serif, Georgia, serif; }
+
+.scroll-x {
+  scrollbar-width: none;
+}
+.scroll-x::-webkit-scrollbar { display: none; }
+
+.text-balance { text-wrap: balance; }
+
+/* phone-like canvas for nicer desktop preview */
+.phone-shell {
+  min-height: 100dvh;
+  max-width: 540px;
+  margin-inline: auto;
+  position: relative;
+  padding-top: calc(var(--safe-top) + 12px);
+  padding-bottom: calc(var(--safe-bottom) + 96px);
+}
+
+.ember-text {
+  background: linear-gradient(135deg, #ffd089, #ff7a45 55%, #ff4d8d);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.shadow-glow {
+  box-shadow: 0 0 40px -8px rgba(255, 122, 69, 0.45);
+}
+
+/* Tap effect */
+.tap {
+  transition: transform .12s ease;
+}
+.tap:active { transform: scale(0.97); }
