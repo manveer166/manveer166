@@ -23,6 +23,8 @@ export default function ConnectClient() {
         </h1>
       </div>
 
+      <GratitudeCard />
+
       <section id="prompt" className="card">
         <div className="flex items-center gap-2 text-[11px] uppercase tracking-wider text-muted">
           <span className="inline-block h-1.5 w-1.5 rounded-full bg-ember animate-pulse2" />
@@ -265,6 +267,89 @@ function ChallengesShelf() {
             </button>
           </div>
         ))}
+      </div>
+    </section>
+  );
+}
+
+function GratitudeCard() {
+  const s = useEmberStore();
+  const today = new Date().toISOString().slice(0, 10);
+  const existing = s.memories.find(
+    (m) => m.kind === "gratitude" && m.date === today,
+  );
+  const [text, setText] = useState(existing?.body ?? "");
+  const [aboutPartner, setAboutPartner] = useState(!!existing?.aboutPartner);
+  const [doShare, setDoShare] = useState(false);
+
+  if (existing) {
+    return (
+      <section className="card">
+        <div className="flex items-center gap-2 text-[11px] uppercase tracking-wider text-muted">
+          <span aria-hidden>🙏</span>
+          today's gratitude
+        </div>
+        <p className="serif italic text-xl mt-2 text-balance">“{existing.body}”</p>
+        <div className="text-xs text-muted mt-2">
+          saved {existing.aboutPartner ? "(about them)" : "(for yourself)"} ·
+          you can add another tomorrow.
+        </div>
+        <a href="/memories#gratitude" className="text-sm text-ember mt-3 inline-block">
+          open the gratitude jar →
+        </a>
+      </section>
+    );
+  }
+
+  return (
+    <section className="card">
+      <div className="flex items-center gap-2 text-[11px] uppercase tracking-wider text-muted">
+        <span aria-hidden>🙏</span>
+        one gratitude
+      </div>
+      <p className="serif italic text-lg mt-2 text-balance text-ink/90">
+        one thing you're glad about today — small is fine.
+      </p>
+      <textarea
+        className="textarea mt-3"
+        rows={2}
+        maxLength={140}
+        placeholder="the way the morning light hit the kitchen…"
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+      />
+      <div className="mt-3 flex flex-wrap items-center gap-3">
+        <label className="flex items-center gap-2 text-sm text-ink/85">
+          <input
+            type="checkbox"
+            checked={aboutPartner}
+            onChange={(e) => setAboutPartner(e.target.checked)}
+          />
+          <span>about them</span>
+        </label>
+        <label className="flex items-center gap-2 text-sm text-ink/85">
+          <input
+            type="checkbox"
+            checked={doShare}
+            onChange={(e) => setDoShare(e.target.checked)}
+            disabled={!s.sharePrefs.allowShares}
+          />
+          <span>share with them for 24h</span>
+        </label>
+      </div>
+      <button
+        className="btn btn-primary mt-3 w-full"
+        disabled={!text.trim()}
+        onClick={() => {
+          store.addGratitude(text, { aboutPartner, share: doShare });
+          setText("");
+          setDoShare(false);
+        }}
+      >
+        save
+      </button>
+      <div className="text-[11px] text-muted mt-2">
+        kept private unless you tick "share". counts toward your flame either way.
       </div>
     </section>
   );

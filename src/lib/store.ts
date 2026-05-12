@@ -47,10 +47,11 @@ export type PromptAnswer = {
 
 export type Memory = {
   id: string;
-  kind: "photo" | "note" | "milestone" | "challenge";
+  kind: "photo" | "note" | "milestone" | "challenge" | "gratitude";
   title: string;
   body?: string;
   data?: string;
+  aboutPartner?: boolean;
   date: string;
   createdAt: number;
 };
@@ -295,6 +296,43 @@ export const store = {
   },
   clearMyShare() {
     set({ shares: state.shares.filter((sh) => !(sh.from === "you" && sh.expiresAt > Date.now())) });
+  },
+
+  // Gratitude — saved privately by default. If `share` is true, also broadcast
+  // to the partner widget for 24h (still opt-in, still auto-expires).
+  addGratitude(text: string, opts: { aboutPartner?: boolean; share?: boolean } = {}) {
+    const t = text.trim();
+    if (!t) return;
+    store.addMemory({
+      kind: "gratitude",
+      title: opts.aboutPartner ? "Grateful for them" : "Grateful today",
+      body: t,
+      aboutPartner: !!opts.aboutPartner,
+    });
+    if (opts.share && state.sharePrefs.allowShares && !isQuiet(state)) {
+      const now = Date.now();
+      store.share({
+        kind: "note",
+        emoji: "🙏",
+        label: "gratitude",
+        caption: t,
+        ms: 24 * 60 * 60_000,
+      });
+      // share() already calls checkIn; just return.
+      return;
+    }
+    store.checkIn();
+  },
+  gratitudeForToday(): Memory | null {
+    const today = todayISO();
+    return (
+      state.memories.find((m) => m.kind === "gratitude" && m.date === today) ?? null
+    );
+  },
+  randomGratitude(): Memory | null {
+    const list = state.memories.filter((m) => m.kind === "gratitude");
+    if (list.length === 0) return null;
+    return list[Math.floor(Math.random() * list.length)];
   },
 
   addMemory(m: Omit<Memory, "id" | "createdAt" | "date">) {
