@@ -14,6 +14,7 @@ const TABS = [
 
 export default function BottomTabs() {
   const path = usePathname();
+  if (path?.startsWith("/welcome")) return null;
   return (
     <nav
       className="fixed bottom-0 inset-x-0 z-40 mx-auto max-w-[540px] px-3"

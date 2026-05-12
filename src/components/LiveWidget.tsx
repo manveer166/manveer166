@@ -204,17 +204,17 @@ function Header() {
 function NotPairedCard() {
   return (
     <a
-      href="/settings"
+      href="/welcome"
       className="card flex items-center gap-3 tap border border-ember/40"
     >
       <Flame size={44} />
       <div className="flex-1">
-        <div className="font-semibold">Pair with someone</div>
+        <div className="font-semibold">Start your flame</div>
         <div className="text-sm text-muted">
-          Add their name to start your flame. (No account needed.)
+          one minute. no account. read how the widget stays kind, then pair.
         </div>
       </div>
-      <span className="btn btn-primary">Start</span>
+      <span className="btn btn-primary">Begin</span>
     </a>
   );
 }
