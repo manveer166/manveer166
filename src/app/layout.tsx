@@ -1,6 +1,7 @@
 import "./globals.css";
 import type { Metadata, Viewport } from "next";
 import BottomTabs from "@/components/BottomTabs";
+import SideNav from "@/components/SideNav";
 import StatusBar from "@/components/StatusBar";
 
 export const metadata: Metadata = {
@@ -31,9 +32,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body className="min-h-[100dvh]">
-        <div className="phone-shell">
+        <SideNav />
+        <div className="app-shell">
           <StatusBar />
-          <main className="px-4 pt-2">{children}</main>
+          <main className="px-4 md:px-0 pt-2">{children}</main>
           <BottomTabs />
         </div>
       </body>

@@ -76,14 +76,39 @@ body {
 
 .text-balance { text-wrap: balance; }
 
-/* phone-like canvas for nicer desktop preview */
-.phone-shell {
+/* phone-like canvas on mobile, real desktop layout on wider screens */
+.app-shell {
   min-height: 100dvh;
-  max-width: 540px;
-  margin-inline: auto;
   position: relative;
   padding-top: calc(var(--safe-top) + 12px);
   padding-bottom: calc(var(--safe-bottom) + 96px);
+  max-width: 540px;
+  margin-inline: auto;
+}
+@media (min-width: 768px) {
+  .app-shell {
+    max-width: 1200px;
+    padding-left: 240px;     /* sidebar width */
+    padding-right: 24px;
+    padding-bottom: 32px;
+  }
+}
+@media (min-width: 1280px) {
+  .app-shell {
+    max-width: 1320px;
+    padding-left: 260px;
+  }
+}
+
+.content-grid {
+  display: grid;
+  gap: 16px;
+}
+@media (min-width: 768px) {
+  .content-grid {
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+    gap: 20px;
+  }
 }
 
 .ember-text {

@@ -52,6 +52,8 @@ export default function LiveWidget() {
       <Header />
       {!s.hasPaired ? <NotPairedCard /> : null}
 
+      <div className="content-grid">
+        <div className="space-y-4">
       <section
         className={clsx(
           "relative overflow-hidden rounded-[28px] p-5 border border-white/10",
@@ -165,19 +167,24 @@ export default function LiveWidget() {
         </div>
       </section>
 
-      <a href="/connect#prompt" className="card flex items-center gap-3 tap">
-        <div className="h-10 w-10 grid place-items-center rounded-2xl bg-gradient-to-br from-ember/30 to-spark/30">
-          <span aria-hidden>✨</span>
+          <PhotoWall />
         </div>
-        <div className="flex-1">
-          <div className="text-[11px] uppercase tracking-wider text-muted">today's prompt</div>
-          <div className="text-ink/95 text-balance">{prompt.text}</div>
-        </div>
-        <span className="text-muted">›</span>
-      </a>
 
-      <StreakStrip />
-      <PhotoWall />
+        <aside className="space-y-4">
+          <a href="/connect#prompt" className="card flex items-center gap-3 tap">
+            <div className="h-10 w-10 grid place-items-center rounded-2xl bg-gradient-to-br from-ember/30 to-spark/30">
+              <span aria-hidden>✨</span>
+            </div>
+            <div className="flex-1">
+              <div className="text-[11px] uppercase tracking-wider text-muted">today's prompt</div>
+              <div className="text-ink/95 text-balance">{prompt.text}</div>
+            </div>
+            <span className="text-muted">›</span>
+          </a>
+
+          <StreakStrip />
+        </aside>
+      </div>
 
       {sheetOpen ? <ShareSheet onClose={() => setSheetOpen(false)} /> : null}
     </div>
@@ -361,14 +368,14 @@ function PhotoWall() {
         <h3 className="font-semibold">Recent moments</h3>
         <a href="/memories" className="text-sm text-ember">all →</a>
       </div>
-      <div className="flex gap-3 overflow-x-auto scroll-x pb-2">
-        {photos.slice(0, 12).map((p) => (
+      <div className="flex md:grid md:grid-cols-3 gap-3 overflow-x-auto md:overflow-visible scroll-x pb-2">
+        {photos.slice(0, 9).map((p) => (
           <div
             key={p.id}
-            className="shrink-0 w-40 rounded-2xl overflow-hidden border border-white/10 bg-black/40"
+            className="shrink-0 md:shrink w-40 md:w-auto rounded-2xl overflow-hidden border border-white/10 bg-black/40"
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={p.data} alt={p.title} className="w-full h-40 object-cover" />
+            <img src={p.data} alt={p.title} className="w-full h-40 md:h-48 object-cover" />
             <div className="p-2 text-[11px] text-muted truncate">{p.title}</div>
           </div>
         ))}

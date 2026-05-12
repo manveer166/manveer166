@@ -22,7 +22,7 @@ export default function StatusBar() {
   if (path?.startsWith("/welcome")) return null;
 
   return (
-    <div className="px-4 flex items-center justify-between text-[12px] text-muted">
+    <div className="px-4 md:px-0 md:hidden flex items-center justify-between text-[12px] text-muted">
       <div className="flex items-center gap-2">
         <span
           className={

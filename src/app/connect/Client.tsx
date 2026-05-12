@@ -23,9 +23,10 @@ export default function ConnectClient() {
         </h1>
       </div>
 
-      <GratitudeCard />
+      <div className="grid md:grid-cols-2 gap-4">
+        <GratitudeCard />
 
-      <section id="prompt" className="card">
+        <section id="prompt" className="card">
         <div className="flex items-center gap-2 text-[11px] uppercase tracking-wider text-muted">
           <span className="inline-block h-1.5 w-1.5 rounded-full bg-ember animate-pulse2" />
           today's prompt
@@ -33,6 +34,8 @@ export default function ConnectClient() {
         <p className="serif italic text-2xl mt-2 text-balance">{prompt.text}</p>
         <PromptAnswer prompt={prompt} answered={answered} />
       </section>
+
+      </div>
 
       <button
         className="w-full card flex items-center gap-3 tap"
@@ -52,7 +55,7 @@ export default function ConnectClient() {
 
       <section>
         <h3 className="font-semibold mb-2 px-1">Arcade</h3>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <GameCard title="Who's more likely" sub="fast-paced Q&A" grad="from-spark/70 to-ember/70" href="#wml" />
           <GameCard title="Truth tap" sub="reveal one thing" grad="from-violet/70 to-sky/40" href="#truth" />
           <GameCard title="20 questions" sub="guess what they're thinking" grad="from-ember/70 to-ember2/70" href="#twenty" />
@@ -60,8 +63,10 @@ export default function ConnectClient() {
         </div>
       </section>
 
-      <WhoIsMoreLikely />
-      <BucketList />
+      <div className="grid md:grid-cols-2 gap-4">
+        <WhoIsMoreLikely />
+        <BucketList />
+      </div>
       <ChallengesShelf />
 
       <CheckInButton />

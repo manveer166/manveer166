@@ -17,7 +17,7 @@ export default function BottomTabs() {
   if (path?.startsWith("/welcome")) return null;
   return (
     <nav
-      className="fixed bottom-0 inset-x-0 z-40 mx-auto max-w-[540px] px-3"
+      className="md:hidden fixed bottom-0 inset-x-0 z-40 mx-auto max-w-[540px] px-3"
       style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 10px)" }}
     >
       <div className="glass rounded-3xl px-2 py-2 flex justify-between">

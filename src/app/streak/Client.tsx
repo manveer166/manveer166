@@ -20,6 +20,7 @@ export default function StreakClient() {
         </h1>
       </div>
 
+      <div className="content-grid">
       <section className="card flex flex-col items-center text-center py-8">
         <Flame size={140} intense />
         <div className="mt-4 text-6xl serif font-semibold tabular-nums">{s.flameDays}</div>
@@ -79,13 +80,16 @@ export default function StreakClient() {
         </div>
       </section>
 
-      <section className="card">
-        <h3 className="font-semibold">Why streaks matter</h3>
-        <p className="text-sm text-muted mt-1">
-          a one-minute ritual a day beats a perfect weekend a year. answer a prompt, send a photo, or
-          a thumb kiss — anything keeps the flame.
-        </p>
-      </section>
+      <aside className="space-y-4">
+        <section className="card">
+          <h3 className="font-semibold">Why streaks matter</h3>
+          <p className="text-sm text-muted mt-1">
+            a one-minute ritual a day beats a perfect weekend a year. answer a prompt, send a photo, or
+            a soft kiss — anything keeps the flame.
+          </p>
+        </section>
+      </aside>
+      </div>
     </div>
   );
 }

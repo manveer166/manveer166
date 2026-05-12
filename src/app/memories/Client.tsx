@@ -110,6 +110,7 @@ export default function MemoriesClient() {
           <div className="text-xs uppercase tracking-wider text-muted px-1">
             {prettyDate(date)}
           </div>
+          <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-3">
           {items.map((m) => (
             <article key={m.id} className="card">
               <div className="flex items-center justify-between">
@@ -130,6 +131,7 @@ export default function MemoriesClient() {
               ) : null}
             </article>
           ))}
+          </div>
         </section>
       ))}
     </div>

@@ -46,6 +46,7 @@ export default function SettingsClient() {
         </h1>
       </div>
 
+      <div className="grid md:grid-cols-2 gap-4">
       <section className="card space-y-3">
         <div className="flex items-center gap-3">
           <Avatar name={you.name} emoji={you.emoji} color={you.color} size={56} />
@@ -89,6 +90,7 @@ export default function SettingsClient() {
           onColor={(c) => setPartner({ ...partner, color: c })}
         />
       </section>
+      </div>
 
       <section className="card">
         <div className="label">pair code</div>
