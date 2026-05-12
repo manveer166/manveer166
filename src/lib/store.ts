@@ -21,6 +21,20 @@ export type WidgetItem = {
   createdAt: number;
 };
 
+// A "share" is an opt-in moment the sender chose to broadcast.
+// It always has an expiry — nothing about a partner is persistent or passive.
+export type Share = {
+  id: string;
+  from: "you" | "partner";
+  kind: "status" | "photo" | "doodle" | "note";
+  emoji?: string;
+  label?: string;
+  data?: string; // photo data URL or doodle SVG
+  caption?: string;
+  createdAt: number;
+  expiresAt: number;
+};
+
 export type PromptAnswer = {
   id: string;
   promptId: string;
@@ -41,6 +55,16 @@ export type Memory = {
   createdAt: number;
 };
 
+export type SharePrefs = {
+  allowShares: boolean;
+  // an explicit kiss must be initiated by the receiver too — no silent buzz
+  allowKisses: boolean;
+  // we never broadcast presence by default
+  showPresence: false;
+  // no read receipts — kept explicit and off
+  showReceipts: false;
+};
+
 export type State = {
   hasPaired: boolean;
   you: Person | null;
@@ -50,24 +74,16 @@ export type State = {
   lastCheckinDate: string | null; // YYYY-MM-DD
   weeklyMask: number; // 7-bit, bit 0 = Mon
   weekStartIso: string; // ISO date for week-start (Monday)
-  widget: WidgetItem[]; // newest first
-  prompts: PromptAnswer[]; // history of daily prompts
+  widget: WidgetItem[]; // newest first (kept for memory log)
+  shares: Share[]; // newest first
+  prompts: PromptAnswer[];
   memories: Memory[];
-  partnerStatus: {
-    activity: string;
-    mood: number; // 1..5
-    lastSeen: number; // epoch ms
-    isHere: boolean; // app open
-  };
-  thumbSync: {
-    youTouching: boolean;
-    partnerTouching: boolean;
-    syncSince: number | null;
-  };
+  quietUntil: number | null; // epoch ms — your shares are paused & theirs are dimmed
+  sharePrefs: SharePrefs;
   unread: number;
 };
 
-const STORAGE_KEY = "ember.state.v1";
+const STORAGE_KEY = "ember.state.v2";
 
 function todayISO(d = new Date()) {
   return d.toISOString().slice(0, 10);
@@ -91,15 +107,16 @@ function defaultState(): State {
     weeklyMask: 0,
     weekStartIso: startOfWeek().toISOString().slice(0, 10),
     widget: [],
+    shares: [],
     prompts: [],
     memories: [],
-    partnerStatus: {
-      activity: "just opened the app",
-      mood: 4,
-      lastSeen: Date.now(),
-      isHere: false,
+    quietUntil: null,
+    sharePrefs: {
+      allowShares: true,
+      allowKisses: true,
+      showPresence: false,
+      showReceipts: false,
     },
-    thumbSync: { youTouching: false, partnerTouching: false, syncSince: null },
     unread: 0,
   };
 }
@@ -162,7 +179,6 @@ export function useStore<T>(selector: (s: State) => T): T {
 }
 
 export function useEmberStore() {
-  // make sure load happens once on the client
   useEffect(() => {
     load();
     emit();
@@ -177,12 +193,45 @@ export function usePair() {
   return useStore((s) => ({ you: s.you, partner: s.partner, hasPaired: s.hasPaired }));
 }
 
+// ---- selectors ----
+export function activeShare(s: State, from: "you" | "partner"): Share | null {
+  const now = Date.now();
+  return s.shares.find((sh) => sh.from === from && sh.expiresAt > now) ?? null;
+}
+
+export function isQuiet(s: State): boolean {
+  return !!s.quietUntil && s.quietUntil > Date.now();
+}
+
 // ---- mutations ----
 function set(patch: Partial<State>) {
   state = { ...state, ...patch };
   persist();
   emit();
 }
+
+function pruneShares() {
+  const now = Date.now();
+  const next = state.shares.filter((sh) => sh.expiresAt > now - 12 * 3600 * 1000);
+  if (next.length !== state.shares.length) set({ shares: next });
+}
+
+export const STATUS_PRESETS: { emoji: string; label: string }[] = [
+  { emoji: "🌙", label: "winding down" },
+  { emoji: "☕️", label: "recharging" },
+  { emoji: "💭", label: "thinking of you" },
+  { emoji: "🌊", label: "deep work" },
+  { emoji: "🍳", label: "cooking" },
+  { emoji: "🚶", label: "out & about" },
+  { emoji: "📚", label: "reading" },
+  { emoji: "💤", label: "sleep" },
+];
+
+export const SHARE_DURATIONS = [
+  { label: "15m", ms: 15 * 60_000 },
+  { label: "1h", ms: 60 * 60_000 },
+  { label: "4h", ms: 4 * 60 * 60_000 },
+];
 
 export const store = {
   load,
@@ -202,27 +251,52 @@ export const store = {
     if (!state.partner) return;
     set({ partner: { ...state.partner, ...p } });
   },
-  addWidget(item: Omit<WidgetItem, "id" | "createdAt">) {
-    const full: WidgetItem = {
-      ...item,
-      id: cryptoId(),
-      createdAt: Date.now(),
-    };
-    set({ widget: [full, ...state.widget].slice(0, 50) });
-    if (item.kind !== "kiss" && item.kind !== "moodSync") {
-      store.addMemory({
-        kind: item.kind === "doodle" ? "note" : item.kind === "photo" ? "photo" : "note",
-        title:
-          item.kind === "photo"
-            ? "Photo to widget"
-            : item.kind === "doodle"
-              ? "Doodle"
-              : "Note",
-        body: item.caption,
-        data: item.data,
-      });
-    }
+  updatePrefs(p: Partial<SharePrefs>) {
+    set({ sharePrefs: { ...state.sharePrefs, ...p } });
   },
+
+  // Quiet mode — you stop broadcasting and incoming dims.
+  goQuiet(hours: number) {
+    set({ quietUntil: Date.now() + hours * 3600_000 });
+  },
+  endQuiet() {
+    set({ quietUntil: null });
+  },
+
+  // Shares always have an expiry and are explicitly chosen.
+  share(input: Omit<Share, "id" | "from" | "createdAt" | "expiresAt"> & { ms: number }) {
+    if (isQuiet(state)) return; // refuse to broadcast while quiet
+    if (!state.sharePrefs.allowShares) return;
+    const now = Date.now();
+    const full: Share = {
+      id: cryptoId(),
+      from: "you",
+      kind: input.kind,
+      emoji: input.emoji,
+      label: input.label,
+      data: input.data,
+      caption: input.caption,
+      createdAt: now,
+      expiresAt: now + Math.max(60_000, input.ms),
+    };
+    set({ shares: [full, ...state.shares].slice(0, 100) });
+    // every share also drops a memory you can revisit later
+    if (input.kind === "photo" || input.kind === "doodle") {
+      store.addMemory({
+        kind: input.kind === "photo" ? "photo" : "note",
+        title: input.kind === "photo" ? "Photo shared" : "Doodle shared",
+        body: input.caption,
+        data: input.data,
+      });
+    } else if (input.kind === "note" && input.caption) {
+      store.addMemory({ kind: "note", title: "Note shared", body: input.caption });
+    }
+    store.checkIn();
+  },
+  clearMyShare() {
+    set({ shares: state.shares.filter((sh) => !(sh.from === "you" && sh.expiresAt > Date.now())) });
+  },
+
   addMemory(m: Omit<Memory, "id" | "createdAt" | "date">) {
     const full: Memory = {
       ...m,
@@ -272,36 +346,29 @@ export const store = {
       ];
     }
     set({ prompts });
-    store.addMemory({
-      kind: "note",
-      title: "Q: " + prompt,
-      body: answer,
-    });
+    store.addMemory({ kind: "note", title: "Q: " + prompt, body: answer });
     store.checkIn();
-    // simulate partner replying after a bit
     queuePartnerReply(promptId);
   },
-  setPartnerStatus(p: Partial<State["partnerStatus"]>) {
-    set({ partnerStatus: { ...state.partnerStatus, ...p } });
-  },
-  setYouTouching(v: boolean) {
-    const ts = { ...state.thumbSync, youTouching: v };
-    if (v && ts.partnerTouching && !ts.syncSince) ts.syncSince = Date.now();
-    if (!v) ts.syncSince = null;
-    set({ thumbSync: ts });
-  },
-  setPartnerTouching(v: boolean) {
-    const ts = { ...state.thumbSync, partnerTouching: v };
-    if (v && ts.youTouching && !ts.syncSince) ts.syncSince = Date.now();
-    if (!v) ts.syncSince = null;
-    set({ thumbSync: ts });
-  },
-  sendKiss() {
-    store.addWidget({ kind: "kiss", from: "you", caption: "thumb kiss" });
+
+  // Kisses are explicit and always opt-in on the receive side too —
+  // they queue as a pending invite rather than appearing as a forced buzz.
+  sendKissInvite() {
+    if (!state.sharePrefs.allowKisses) return;
+    if (isQuiet(state)) return;
+    const now = Date.now();
+    const sh: Share = {
+      id: cryptoId(),
+      from: "you",
+      kind: "note",
+      emoji: "💗",
+      label: "kiss invite",
+      caption: "thinking of you — tap back if you can",
+      createdAt: now,
+      expiresAt: now + 60 * 60_000,
+    };
+    set({ shares: [sh, ...state.shares].slice(0, 100) });
     store.checkIn();
-  },
-  partnerSendKiss() {
-    store.addWidget({ kind: "kiss", from: "partner", caption: "thumb kiss" });
   },
 };
 
@@ -312,23 +379,12 @@ function cryptoId() {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
 }
 
-// ---- Simulated partner — gives the app life for a single user ----
-const PARTNER_ACTIVITIES = [
-  "walking to class",
-  "in line for coffee",
-  "deep in a book",
-  "stretching after a run",
-  "stuck in a meeting",
-  "looking out the window",
-  "humming a song",
-  "doodling on a napkin",
-  "missing you a bit",
-  "thinking about that thing you said",
-];
-
+// ---- Simulated partner ----
+// Sends explicit shares only, never ambient presence/activity.
 function queuePartnerReply(promptId: string) {
   const delay = 25_000 + Math.random() * 20_000;
   setTimeout(() => {
+    if (isQuiet(state)) return;
     const REPLIES: Record<string, string[]> = {
       default: [
         "honestly, you.",
@@ -347,44 +403,51 @@ function queuePartnerReply(promptId: string) {
         : p,
     );
     set({ prompts, unread: state.unread + 1 });
-    store.addWidget({
-      kind: "note",
-      from: "partner",
-      caption: text,
-    });
   }, delay);
 }
 
-// Tick partner status every so often
+const PARTNER_SHARES: { emoji: string; label: string; ms: number }[] = [
+  { emoji: "☕️", label: "recharging", ms: 60 * 60_000 },
+  { emoji: "🌊", label: "deep work", ms: 90 * 60_000 },
+  { emoji: "💭", label: "thinking of you", ms: 45 * 60_000 },
+  { emoji: "📚", label: "reading", ms: 60 * 60_000 },
+  { emoji: "🚶", label: "out & about", ms: 30 * 60_000 },
+  { emoji: "🌙", label: "winding down", ms: 2 * 60 * 60_000 },
+];
+
 let tickerStarted = false;
 export function startSimulator() {
   if (tickerStarted) return;
   tickerStarted = true;
   if (typeof window === "undefined") return;
   load();
-  const tick = () => {
-    if (!state.hasPaired) return;
-    const next = PARTNER_ACTIVITIES[
-      Math.floor(Math.random() * PARTNER_ACTIVITIES.length)
-    ];
-    set({
-      partnerStatus: {
-        ...state.partnerStatus,
-        activity: next,
-        lastSeen: Date.now() - Math.floor(Math.random() * 8 * 60_000),
-        isHere: Math.random() < 0.35,
-      },
-    });
-  };
-  setTimeout(tick, 4_000);
-  setInterval(tick, 45_000);
+  // prune expired shares every minute
+  setInterval(pruneShares, 60_000);
 
-  // occasional partner thumb-touch
-  setInterval(() => {
+  // partner occasionally posts a *new* share (overwriting their previous active one).
+  // never more often than ~10–25 min apart; respects quiet.
+  function partnerSharesNow() {
     if (!state.hasPaired) return;
-    if (Math.random() < 0.18) {
-      store.setPartnerTouching(true);
-      setTimeout(() => store.setPartnerTouching(false), 3_500 + Math.random() * 5_000);
-    }
-  }, 30_000);
+    if (isQuiet(state)) return;
+    const p = PARTNER_SHARES[Math.floor(Math.random() * PARTNER_SHARES.length)];
+    const now = Date.now();
+    // remove any existing active partner share
+    const remaining = state.shares.filter(
+      (sh) => !(sh.from === "partner" && sh.expiresAt > now),
+    );
+    const sh: Share = {
+      id: cryptoId(),
+      from: "partner",
+      kind: "status",
+      emoji: p.emoji,
+      label: p.label,
+      createdAt: now,
+      expiresAt: now + p.ms,
+    };
+    set({ shares: [sh, ...remaining].slice(0, 100), unread: state.unread + 1 });
+  }
+  setTimeout(partnerSharesNow, 8_000);
+  setInterval(() => {
+    if (Math.random() < 0.35) partnerSharesNow();
+  }, 6 * 60_000);
 }

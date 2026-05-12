@@ -1,23 +1,25 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import clsx from "clsx";
 import { store, useEmberStore } from "@/lib/store";
 import { CHALLENGES, promptForToday } from "@/lib/prompts";
 import Flame from "@/components/Flame";
+import ShareSheet from "@/components/ShareSheet";
 
 export default function ConnectClient() {
   const s = useEmberStore();
   const prompt = useMemo(promptForToday, []);
   const today = new Date().toISOString().slice(0, 10);
   const answered = s.prompts.find((p) => p.promptId === prompt.id && p.date === today);
+  const [sheet, setSheet] = useState(false);
 
   return (
     <div className="space-y-5 pt-2">
       <div>
         <div className="text-[11px] uppercase tracking-[.22em] text-muted">connect</div>
         <h1 className="serif text-3xl">
-          fun things for <em className="ember-text">the two of you</em>
+          things to do <em className="ember-text">together</em>
         </h1>
       </div>
 
@@ -30,37 +32,29 @@ export default function ConnectClient() {
         <PromptAnswer prompt={prompt} answered={answered} />
       </section>
 
-      <PhotoToWidget />
-
-      <Doodle />
+      <button
+        className="w-full card flex items-center gap-3 tap"
+        onClick={() => setSheet(true)}
+      >
+        <div className="h-12 w-12 rounded-2xl grid place-items-center bg-gradient-to-br from-ember2/40 via-ember/40 to-spark/40 text-2xl">
+          ✨
+        </div>
+        <div className="flex-1 text-left">
+          <div className="font-semibold">Share something</div>
+          <div className="text-sm text-muted">
+            status, photo, doodle, or note — fades on its own.
+          </div>
+        </div>
+        <span className="text-muted">›</span>
+      </button>
 
       <section>
         <h3 className="font-semibold mb-2 px-1">Arcade</h3>
         <div className="grid grid-cols-2 gap-3">
-          <GameCard
-            title="Who's more likely"
-            sub="fast-paced Q&A"
-            grad="from-spark/70 to-ember/70"
-            href="#wml"
-          />
-          <GameCard
-            title="Truth tap"
-            sub="reveal one thing"
-            grad="from-violet/70 to-sky/40"
-            href="#truth"
-          />
-          <GameCard
-            title="20 questions"
-            sub="guess what they're thinking"
-            grad="from-ember/70 to-ember2/70"
-            href="#twenty"
-          />
-          <GameCard
-            title="Bucket list"
-            sub="add one, share later"
-            grad="from-sky/40 to-violet/60"
-            href="#bucket"
-          />
+          <GameCard title="Who's more likely" sub="fast-paced Q&A" grad="from-spark/70 to-ember/70" href="#wml" />
+          <GameCard title="Truth tap" sub="reveal one thing" grad="from-violet/70 to-sky/40" href="#truth" />
+          <GameCard title="20 questions" sub="guess what they're thinking" grad="from-ember/70 to-ember2/70" href="#twenty" />
+          <GameCard title="Bucket list" sub="add one, share later" grad="from-sky/40 to-violet/60" href="#bucket" />
         </div>
       </section>
 
@@ -69,6 +63,8 @@ export default function ConnectClient() {
       <ChallengesShelf />
 
       <CheckInButton />
+
+      {sheet ? <ShareSheet onClose={() => setSheet(false)} /> : null}
     </div>
   );
 }
@@ -101,9 +97,9 @@ function PromptAnswer({
               they said: <em className="text-ink/90 serif">“{answered.answerPartner}”</em>
             </span>
           ) : saved ? (
-            "waiting on them…"
+            "saved — only sent when they answer too"
           ) : (
-            "saved privately until they answer too"
+            "stays private until they answer too"
           )}
         </div>
         <button
@@ -118,168 +114,6 @@ function PromptAnswer({
         </button>
       </div>
     </div>
-  );
-}
-
-function PhotoToWidget() {
-  const [preview, setPreview] = useState<string | null>(null);
-  const [caption, setCaption] = useState("");
-  const fileRef = useRef<HTMLInputElement>(null);
-
-  function pick() {
-    fileRef.current?.click();
-  }
-  function onFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const f = e.target.files?.[0];
-    if (!f) return;
-    const reader = new FileReader();
-    reader.onload = () => setPreview(String(reader.result));
-    reader.readAsDataURL(f);
-  }
-  function send() {
-    if (!preview) return;
-    store.addWidget({ kind: "photo", from: "you", data: preview, caption: caption.trim() || undefined });
-    store.checkIn();
-    setPreview(null);
-    setCaption("");
-  }
-  return (
-    <section className="card">
-      <div className="flex items-start gap-3">
-        <div className="h-10 w-10 rounded-2xl bg-gradient-to-br from-spark to-violet grid place-items-center text-xl">📸</div>
-        <div className="flex-1">
-          <div className="font-semibold">Send to their widget</div>
-          <div className="text-sm text-muted">a photo or doodle lands right on their phone.</div>
-        </div>
-      </div>
-
-      {preview ? (
-        <div className="mt-3 rounded-2xl overflow-hidden border border-white/10">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={preview} alt="preview" className="w-full max-h-80 object-cover" />
-          <div className="p-3 space-y-2">
-            <input
-              className="input"
-              placeholder="add a tiny caption (optional)"
-              value={caption}
-              onChange={(e) => setCaption(e.target.value)}
-              maxLength={80}
-            />
-            <div className="flex gap-2">
-              <button className="btn btn-ghost flex-1" onClick={() => setPreview(null)}>
-                cancel
-              </button>
-              <button className="btn btn-primary flex-1" onClick={send}>
-                send to their widget
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : (
-        <button
-          className="mt-3 w-full rounded-2xl border border-dashed border-white/15 bg-black/20 py-6 text-muted hover:text-ink hover:border-ember/60 transition"
-          onClick={pick}
-        >
-          tap to pick a photo
-        </button>
-      )}
-      <input
-        ref={fileRef}
-        type="file"
-        accept="image/*"
-        capture="environment"
-        className="hidden"
-        onChange={onFile}
-      />
-    </section>
-  );
-}
-
-function Doodle() {
-  const ref = useRef<SVGSVGElement>(null);
-  const [paths, setPaths] = useState<string[]>([]);
-  const [cur, setCur] = useState<string>("");
-  const drawing = useRef(false);
-
-  function pt(e: React.PointerEvent) {
-    const r = ref.current!.getBoundingClientRect();
-    const x = ((e.clientX - r.left) / r.width) * 300;
-    const y = ((e.clientY - r.top) / r.height) * 220;
-    return { x, y };
-  }
-  function down(e: React.PointerEvent) {
-    drawing.current = true;
-    const { x, y } = pt(e);
-    setCur(`M ${x.toFixed(1)} ${y.toFixed(1)}`);
-  }
-  function move(e: React.PointerEvent) {
-    if (!drawing.current) return;
-    const { x, y } = pt(e);
-    setCur((c) => `${c} L ${x.toFixed(1)} ${y.toFixed(1)}`);
-  }
-  function up() {
-    if (!drawing.current) return;
-    drawing.current = false;
-    if (cur) setPaths((p) => [...p, cur]);
-    setCur("");
-  }
-  function clear() {
-    setPaths([]);
-    setCur("");
-  }
-  function send() {
-    if (paths.length === 0 && !cur) return;
-    const all = [...paths, cur].filter(Boolean);
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 220">
-      <rect width="300" height="220" fill="#1a1722"/>
-      ${all.map((d) => `<path d="${d}" stroke="#ff4d8d" stroke-width="3.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`).join("")}
-    </svg>`;
-    const data = "data:image/svg+xml;utf8," + encodeURIComponent(svg);
-    store.addWidget({ kind: "doodle", from: "you", data, caption: "doodle" });
-    store.checkIn();
-    clear();
-  }
-
-  return (
-    <section className="card">
-      <div className="flex items-center justify-between">
-        <div className="font-semibold">Doodle to widget</div>
-        <div className="flex gap-2">
-          <button className="btn btn-ghost" onClick={clear}>
-            clear
-          </button>
-          <button className="btn btn-primary" onClick={send} disabled={paths.length === 0}>
-            send
-          </button>
-        </div>
-      </div>
-      <div className="mt-3 rounded-2xl overflow-hidden border border-white/10 bg-panel2">
-        <svg
-          ref={ref}
-          viewBox="0 0 300 220"
-          className="w-full aspect-[300/220] touch-none"
-          onPointerDown={down}
-          onPointerMove={move}
-          onPointerUp={up}
-          onPointerLeave={up}
-        >
-          {paths.map((d, i) => (
-            <path
-              key={i}
-              d={d}
-              stroke="#ff4d8d"
-              strokeWidth="3.5"
-              fill="none"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          ))}
-          {cur ? (
-            <path d={cur} stroke="#ff4d8d" strokeWidth="3.5" fill="none" strokeLinecap="round" />
-          ) : null}
-        </svg>
-      </div>
-    </section>
   );
 }
 

@@ -1,9 +1,10 @@
-# Ember — a live widget for the two of you
+# Ember — a soft place to land
 
-A mobile-first couples app focused on a **live widget** that keeps your
-partner present on your screen. Inspired by Candle, with more emphasis on
-real-time presence (thumb sync, partner activity, instant photo-to-widget,
-doodles), zero accounts, and zero ads.
+A mobile-first couples app built around a **live widget** that's
+deliberately *not* a surveillance tool. Inspired by Candle, with the
+opposite stance on presence: nothing about your partner is broadcast
+unless they explicitly chose to send it, and every share fades on its
+own. No last-seen, no read receipts, no ambient activity feed, no buzzers.
 
 > Built as a Next.js PWA so the same code runs on iOS, Android, and the web.
 > Install it from the browser's "Add to Home Screen" — it opens fullscreen
@@ -11,21 +12,36 @@ doodles), zero accounts, and zero ads.
 > To publish to the App Store / Play Store later, wrap with
 > [Capacitor](https://capacitorjs.com) (one command).
 
+## The privacy stance
+
+Couples apps tend to drift toward "where are they / are they online now".
+Ember refuses that path:
+
+- **No presence broadcast.** No "online", no "is here", no "last seen".
+- **No read receipts.** Ever.
+- **No ambient activity feed.** Your partner's widget only shows what they
+  explicitly chose to put on it.
+- **Every share auto-expires.** 15m / 1h / 4h — sender picks.
+- **Quiet hours, one tap.** Pause everything in both directions, no
+  explanation owed, no notifications go out.
+- **Soft kisses.** A 💗 invite they can tap back to, not a buzzer.
+
 ## What's in it
 
-- **Live Widget home** — a beating, animated card with your partner's
-  current activity, presence dot, latest photo / doodle / kiss they sent,
-  a thumb-sync ring you both hold to feel each other, today's prompt, and
-  the weekly streak strip.
-- **Connect** — today's prompt, "send to their widget" photo flow,
-  freehand doodle, daily challenges, and a small arcade (Who's More Likely,
-  bucket list).
-- **Memories** — every photo, question answered, challenge, and bucket-list
-  item, grouped by day. Filters for Today / Photos / Questions.
-- **Flame** — your streak. One tiny action a day keeps it lit. Big animated
-  flame, weekly dots, unlockable milestones.
+- **Live Widget home** — your partner's *currently active share* (or the
+  soft empty state), plus a mirror of what you're putting out, today's
+  prompt, the streak strip, and a one-tap quiet toggle.
+- **Share now** — a bottom sheet to send a status preset (🌙 winding down,
+  ☕️ recharging, 💭 thinking of you, etc.), a photo, a doodle, or a short
+  note — each with a chosen expiry.
+- **Connect** — today's prompt (answers stay private until both have
+  answered), a small arcade (Who's More Likely, bucket list), daily
+  challenges.
+- **Memories** — your saved moments, grouped by day. Filters for Today /
+  Photos / Questions.
+- **Flame** — your streak. One tiny action a day keeps it lit.
 - **You** — pair with someone via a code, pick a name, emoji, and gradient
-  for each of you.
+  for each of you, and flip the only two privacy switches that exist.
 
 ## The "live widget" idea
 

@@ -113,6 +113,33 @@ export default function SettingsClient() {
         {s.hasPaired ? "save" : "start our flame"}
       </button>
 
+      <section className="card space-y-3">
+        <div>
+          <div className="font-semibold">Privacy</div>
+          <div className="text-xs text-muted">
+            we never share presence, last-seen, or read receipts. these are the
+            only two things ever sent — both off-switch any time.
+          </div>
+        </div>
+        <Toggle
+          label="share moments to their widget"
+          sub="status, photo, doodle, note — each fades after the time you pick."
+          on={s.sharePrefs.allowShares}
+          onChange={(v) => store.updatePrefs({ allowShares: v })}
+        />
+        <Toggle
+          label="soft kiss invites"
+          sub="a quiet 💗 they can tap back to — never a buzzer."
+          on={s.sharePrefs.allowKisses}
+          onChange={(v) => store.updatePrefs({ allowKisses: v })}
+        />
+        <div className="rounded-2xl border border-edge bg-black/30 p-3 text-xs text-muted space-y-1">
+          <div>presence broadcasting <span className="text-ink/70">off — always</span></div>
+          <div>last-seen <span className="text-ink/70">off — always</span></div>
+          <div>read receipts <span className="text-ink/70">off — always</span></div>
+        </div>
+      </section>
+
       {s.hasPaired ? (
         <button
           className="btn btn-ghost w-full text-bad"
@@ -137,8 +164,7 @@ function Picker({
   color: string;
   onEmoji: (e: string) => void;
   onColor: (c: string) => void;
-}) {
-  return (
+}) {  return (
     <div className="space-y-2">
       <div className="flex gap-1.5 overflow-x-auto scroll-x">
         {EMOJIS.map((e) => (
@@ -168,6 +194,43 @@ function Picker({
         ))}
       </div>
     </div>
+  );
+}
+
+function Toggle({
+  label,
+  sub,
+  on,
+  onChange,
+}: {
+  label: string;
+  sub?: string;
+  on: boolean;
+  onChange: (v: boolean) => void;
+}) {
+  return (
+    <button
+      onClick={() => onChange(!on)}
+      className="w-full flex items-start gap-3 text-left tap"
+    >
+      <div className="flex-1">
+        <div className="text-sm text-ink">{label}</div>
+        {sub ? <div className="text-xs text-muted mt-0.5">{sub}</div> : null}
+      </div>
+      <div
+        className={
+          "shrink-0 h-6 w-11 rounded-full p-0.5 transition " +
+          (on ? "bg-gradient-to-r from-ember2 to-spark" : "bg-edge")
+        }
+      >
+        <div
+          className={
+            "h-5 w-5 rounded-full bg-white transition " +
+            (on ? "translate-x-5" : "translate-x-0")
+          }
+        />
+      </div>
+    </button>
   );
 }
 
